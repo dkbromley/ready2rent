@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { notFound, redirect } from 'next/navigation';
 import {
   ArrowLeft,
@@ -22,7 +21,7 @@ import { getJobDetail } from '@/server/queries';
 import { PageHeader, Card, SectionTitle } from '@/components/ui';
 import { JobStatusBadge, PriorityBadge, SameDayBadge } from '@/components/StatusBadge';
 import { JobStatusActions, JobNotes } from '@/components/JobActions';
-import { JobPhotoUpload } from '@/components/JobPhotoUpload';
+import { JobPhotos } from '@/components/JobPhotos';
 import { formatInTz } from '@/lib/datetime';
 import { formatTurnoverWindow, JOB_STATUS_META } from '@/lib/status';
 
@@ -109,26 +108,12 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
           {/* Photos */}
           <Card>
-            <SectionTitle action={isCleaner ? <JobPhotoUpload jobId={job.id} /> : undefined}>
-              Completion photos
-            </SectionTitle>
-            {job.photos.length === 0 ? (
-              <p className="text-sm text-navy-500">No photos uploaded yet.</p>
-            ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {job.photos.map((photo) => (
-                  <a key={photo.id} href={photo.url} target="_blank" rel="noreferrer" className="group relative aspect-square overflow-hidden rounded-xl bg-navy-100">
-                    <Image
-                      src={photo.url}
-                      alt={photo.caption ?? 'Completion photo'}
-                      fill
-                      sizes="200px"
-                      className="object-cover transition group-hover:scale-105"
-                    />
-                  </a>
-                ))}
-              </div>
-            )}
+            <SectionTitle>Completion photos</SectionTitle>
+            <JobPhotos
+              jobId={job.id}
+              canManage={isCleaner}
+              photos={job.photos.map((p) => ({ id: p.id, url: p.url, caption: p.caption }))}
+            />
           </Card>
         </div>
 

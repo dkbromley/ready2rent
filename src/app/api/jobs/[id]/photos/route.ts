@@ -2,16 +2,13 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser, canAccessJob } from '@/lib/rbac';
 import { prisma } from '@/lib/prisma';
 import { storeJobPhoto } from '@/lib/storage';
+import { MAX_PHOTOS_PER_JOB, MAX_IMAGE_BYTES, ALLOWED_IMAGE_TYPES } from '@/lib/limits';
 
 export const runtime = 'nodejs';
 
-const MAX_BYTES = 8 * 1024 * 1024; // 8MB
-const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic']);
-
 /**
- * Job completion photo upload.
- * Stores via Supabase Storage in production (local FS fallback in dev) — see
- * src/lib/storage.ts — then records a JobPhoto row.
+ * Job completion photo upload. Enforces a per-job cap so storage can't balloon,
+ * stores via Supabase Storage (local FS fallback in dev), records a JobPhoto row.
  */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id: jobId } = await ctx.params;
@@ -21,15 +18,23 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
+  const existing = await prisma.jobPhoto.count({ where: { jobId } });
+  if (existing >= MAX_PHOTOS_PER_JOB) {
+    return NextResponse.json(
+      { error: `Photo limit reached (${MAX_PHOTOS_PER_JOB}). Delete one to add another.` },
+      { status: 409 },
+    );
+  }
+
   const form = await req.formData();
   const file = form.get('photo');
   if (!(file instanceof File)) {
     return NextResponse.json({ error: 'No file provided' }, { status: 400 });
   }
-  if (file.size > MAX_BYTES) {
+  if (file.size > MAX_IMAGE_BYTES) {
     return NextResponse.json({ error: 'File too large (max 8MB)' }, { status: 400 });
   }
-  if (file.type && !ALLOWED.has(file.type)) {
+  if (file.type && !ALLOWED_IMAGE_TYPES.has(file.type)) {
     return NextResponse.json({ error: 'Unsupported image type' }, { status: 400 });
   }
 
@@ -50,5 +55,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     data: { jobId, url: stored.url, uploadedByUserId: user.id },
   });
 
-  return NextResponse.json({ ok: true, photo });
+  const count = existing + 1;
+  return NextResponse.json({ ok: true, photo, count, remaining: MAX_PHOTOS_PER_JOB - count });
 }

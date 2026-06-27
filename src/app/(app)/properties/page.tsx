@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Plus, Home, CalendarCheck, Sparkles, AlertTriangle } from 'lucide-react';
 import { requireRole } from '@/lib/rbac';
 import { UserRole } from '@prisma/client';
@@ -38,6 +39,11 @@ export default async function PropertiesPage() {
               p.assignedCleanerOrganization?.name;
             return (
               <Link key={p.id} href={`/properties/${p.id}`} className="card block p-5 transition hover:shadow-card-hover">
+                {p.imageUrl && (
+                  <div className="relative mb-3 aspect-[16/9] overflow-hidden rounded-xl bg-navy-100">
+                    <Image src={p.imageUrl} alt={p.name} fill sizes="(max-width:640px) 100vw, 320px" className="object-cover" />
+                  </div>
+                )}
                 <div className="flex items-start justify-between">
                   <div className="rounded-xl bg-brand-50 p-2 text-brand-700">
                     <Home className="h-5 w-5" />

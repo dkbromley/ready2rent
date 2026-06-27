@@ -207,6 +207,8 @@ model Property {
   defaultCheckInTime   String   @default("16:00")
   defaultCheckOutTime  String   @default("10:00")
   notes                String?
+  /// Optional hero image for the property (Supabase Storage public URL).
+  imageUrl             String?
   active               Boolean  @default(true)
   /// Owner-led vs cleaner-led onboarding (see ManagementMode).
   managementMode       ManagementMode @default(OWNER_MANAGED)
@@ -344,6 +346,10 @@ model TurnoverJob {
   cleanerNotes String?
 
   completedAt DateTime?
+  /// Set ~30 days after completion by the cleanup cron. Archived jobs drop off
+  /// all dashboards/lists but the row is preserved (analytics are never lost);
+  /// only their photos are pruned to reclaim storage.
+  archivedAt  DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -361,6 +367,10 @@ model TurnoverJob {
   @@index([assignedUserId])
   @@index([status])
   @@index([checkoutDateTime])
+  @@index([completedAt])
+  @@index([archivedAt])
+  // Hot path: scope by assignee, filter by status, sort by checkout.
+  @@index([assignedUserId, status, checkoutDateTime])
 }
 
 model JobStatusHistory {

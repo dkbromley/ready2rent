@@ -172,7 +172,7 @@ export async function listCleanerProperties(user: SessionUser) {
 export async function getCleanerCalendarJobs(user: SessionUser) {
   const scope = await getCleanerJobScope(user);
   const jobs = await prisma.turnoverJob.findMany({
-    where: { ...scope, status: { not: JobStatus.CANCELED } },
+    where: { ...scope, status: { not: JobStatus.CANCELED }, archivedAt: null },
     include: { property: { select: { name: true, city: true, state: true, timezone: true } } },
     orderBy: { checkoutDateTime: 'asc' },
   });
@@ -237,10 +237,31 @@ export async function getJobDetail(jobId: string) {
 
 export async function listOwnerJobs(user: SessionUser) {
   const propertyIds = await getOwnerScopePropertyIds(user);
+  // Active turnovers only — completed ones live in the Archive, archived ones
+  // are hidden, canceled ones live in per-job history.
   return prisma.turnoverJob.findMany({
-    where: { propertyId: { in: propertyIds } },
+    where: {
+      propertyId: { in: propertyIds },
+      archivedAt: null,
+      status: { notIn: [JobStatus.COMPLETED, JobStatus.CANCELED] },
+    },
     include: { property: true, reservation: true },
     orderBy: { checkoutDateTime: 'asc' },
+  });
+}
+
+/** Recently completed (not yet archived) jobs for the Archive view, role-scoped. */
+export async function getArchivedJobs(user: SessionUser) {
+  const where =
+    user.role === UserRole.CLEANER
+      ? { ...(await getCleanerJobScope(user)) }
+      : { propertyId: { in: await getOwnerScopePropertyIds(user) } };
+
+  return prisma.turnoverJob.findMany({
+    where: { ...where, status: JobStatus.COMPLETED, archivedAt: null },
+    include: { property: true, _count: { select: { photos: true } } },
+    orderBy: { completedAt: 'desc' },
+    take: 200,
   });
 }
 

@@ -27,13 +27,17 @@ export function JobStatusActions({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [note, setNote] = useState('');
+  // Track which target button was pressed so only it shows the spinner.
+  const [pendingTo, setPendingTo] = useState<JobStatus | null>(null);
   const next = JOB_NEXT_STATUSES[current];
 
   function move(to: JobStatus) {
+    setPendingTo(to);
     startTransition(async () => {
       await updateJobStatus(jobId, to, note || undefined);
       setNote('');
       router.refresh();
+      setPendingTo(null);
     });
   }
 
@@ -53,6 +57,7 @@ export function JobStatusActions({
         {next.map((to) => {
           const danger = to === JobStatus.PROBLEM;
           const success = to === JobStatus.COMPLETED;
+          const isThisPending = pendingTo === to;
           return (
             <button
               key={to}
@@ -65,7 +70,7 @@ export function JobStatusActions({
                 !success && !danger && 'bg-white text-navy-800 ring-1 ring-inset ring-navy-200 hover:bg-navy-50',
               )}
             >
-              {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : STATUS_ICON[to]}
+              {isThisPending ? <Loader2 className="h-4 w-4 animate-spin" /> : STATUS_ICON[to]}
               {JOB_STATUS_META[to].label}
             </button>
           );

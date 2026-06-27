@@ -19,6 +19,8 @@ import { regeneratePropertyJobs } from '@/server/sync/job-generator';
 import { notify } from '@/server/notifications';
 import { notifyOwnerOfJob } from '@/server/owner-notify';
 import { detectPlatformFromUrl } from '@/lib/feeds';
+import { storePropertyImage, deleteStoredFile } from '@/lib/storage';
+import { MAX_IMAGE_BYTES, ALLOWED_IMAGE_TYPES } from '@/lib/limits';
 
 // ---------------------------------------------------------------------------
 // Properties
@@ -56,8 +58,43 @@ export async function createProperty(formData: FormData) {
     data: { ...parsed.data, ownerOrganizationId: membership.organizationId },
   });
 
+  await handlePropertyImageUpload(property.id, formData);
+
   revalidatePath('/properties');
   redirect(`/properties/${property.id}`);
+}
+
+/** Reads an optional `image` File from a property form and stores it. No-op when absent/invalid. */
+async function handlePropertyImageUpload(propertyId: string, formData: FormData): Promise<void> {
+  const file = formData.get('image');
+  if (!(file instanceof File) || file.size === 0) return;
+  if (file.size > MAX_IMAGE_BYTES) return;
+  if (file.type && !ALLOWED_IMAGE_TYPES.has(file.type)) return;
+  const ext = file.name.split('.').pop() || 'jpg';
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const stored = await storePropertyImage(propertyId, bytes, ext, file.type || 'image/jpeg').catch(() => null);
+  if (stored) await prisma.property.update({ where: { id: propertyId }, data: { imageUrl: stored.url } });
+}
+
+/** Replace/remove a property's image after creation (called from the detail page). */
+export async function setPropertyImageFromForm(formData: FormData) {
+  const user = await requireUser();
+  const propertyId = String(formData.get('propertyId') ?? '');
+  if (!(await canAccessProperty(user, propertyId))) throw new Error('Not authorized.');
+  const prop = await prisma.property.findUnique({ where: { id: propertyId }, select: { imageUrl: true } });
+  await deleteStoredFile(prop?.imageUrl);
+  await prisma.property.update({ where: { id: propertyId }, data: { imageUrl: null } });
+  await handlePropertyImageUpload(propertyId, formData);
+  revalidatePath(`/properties/${propertyId}`);
+}
+
+export async function removePropertyImage(propertyId: string) {
+  const user = await requireUser();
+  if (!(await canAccessProperty(user, propertyId))) throw new Error('Not authorized.');
+  const prop = await prisma.property.findUnique({ where: { id: propertyId }, select: { imageUrl: true } });
+  await deleteStoredFile(prop?.imageUrl);
+  await prisma.property.update({ where: { id: propertyId }, data: { imageUrl: null } });
+  revalidatePath(`/properties/${propertyId}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -184,6 +221,16 @@ export async function updateJobStatus(jobId: string, toStatus: JobStatus, note?:
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath('/cleaner');
   revalidatePath('/dashboard');
+}
+
+export async function deleteJobPhoto(photoId: string) {
+  const user = await requireUser();
+  const photo = await prisma.jobPhoto.findUnique({ where: { id: photoId } });
+  if (!photo) return;
+  if (!(await canAccessJob(user, photo.jobId))) throw new Error('Not authorized.');
+  await deleteStoredFile(photo.url);
+  await prisma.jobPhoto.delete({ where: { id: photoId } });
+  revalidatePath(`/jobs/${photo.jobId}`);
 }
 
 export async function saveJobNotes(formData: FormData) {
@@ -348,6 +395,8 @@ export async function createCleanerProperty(formData: FormData) {
   });
 
   // Immediate first sync so the schedule appears right away.
+  await handlePropertyImageUpload(property.id, formData);
+
   const feed = property.calendarFeeds[0];
   if (feed) await syncFeed(feed.id).catch(() => undefined);
 

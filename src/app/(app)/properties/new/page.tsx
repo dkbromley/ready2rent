@@ -64,6 +64,10 @@ export default async function NewPropertyPage() {
             <textarea name="notes" rows={3} placeholder="Gate code, supply closet location, parking…" className={inputClass} />
           </Field>
 
+          <Field label="Property photo (optional)">
+            <input name="image" type="file" accept="image/*" className="block w-full text-sm text-navy-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100" />
+          </Field>
+
           <div className="flex justify-end gap-3 pt-2">
             <Link href="/properties" className="rounded-xl px-4 py-2 text-sm font-medium text-navy-600 hover:bg-navy-50">
               Cancel

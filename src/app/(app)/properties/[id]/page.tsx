@@ -31,6 +31,7 @@ import {
   Chip,
 } from '@/components/ui';
 import { JobCard } from '@/components/JobCard';
+import { PropertyImageUpload } from '@/components/PropertyImageUpload';
 import { ReservationStatusBadge, SyncStatusBadge } from '@/components/StatusBadge';
 import { formatInTz } from '@/lib/datetime';
 
@@ -76,6 +77,11 @@ export default async function PropertyDetailPage({
           </form>
         }
       />
+
+      {/* Hero image */}
+      <div className="mb-6">
+        <PropertyImageUpload propertyId={property.id} imageUrl={property.imageUrl} canManage />
+      </div>
 
       {/* Quick facts */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -138,8 +144,8 @@ export default async function PropertyDetailPage({
             {property.reservations.length === 0 ? (
               <Card className="text-sm text-navy-500">No reservations imported yet.</Card>
             ) : (
-              <Card className="overflow-hidden p-0">
-                <table className="w-full text-sm">
+              <Card className="overflow-x-auto p-0">
+                <table className="w-full min-w-[28rem] text-sm">
                   <thead className="bg-navy-50 text-left text-xs uppercase tracking-wide text-navy-500">
                     <tr>
                       <th className="px-4 py-2 font-medium">Check-in</th>

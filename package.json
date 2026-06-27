@@ -14,6 +14,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "setup:storage": "tsx --env-file=.env scripts/setup-storage.ts",
+    "harden:rls": "tsx --env-file=.env scripts/harden-rls.ts",
     "sync:worker": "tsx src/server/sync/worker.ts"
   },
   "prisma": {

@@ -13,6 +13,7 @@ import {
   Activity,
   Users,
   Bell,
+  Archive,
   LogOut,
   Menu,
   X,
@@ -34,6 +35,7 @@ const NAV: NavItem[] = [
   { href: '/cleaner', label: 'My jobs', icon: <Sparkles className="h-5 w-5" />, roles: [UserRole.CLEANER, UserRole.ADMIN] },
   { href: '/cleaner/calendar', label: 'Calendar', icon: <CalendarDays className="h-5 w-5" />, roles: [UserRole.CLEANER, UserRole.ADMIN] },
   { href: '/cleaner/properties', label: 'My properties', icon: <Home className="h-5 w-5" />, roles: [UserRole.CLEANER, UserRole.ADMIN] },
+  { href: '/archive', label: 'Archive', icon: <Archive className="h-5 w-5" />, roles: [UserRole.OWNER, UserRole.CLEANER, UserRole.ADMIN] },
   { href: '/admin', label: 'Admin', icon: <Users className="h-5 w-5" />, roles: [UserRole.ADMIN] },
   { href: '/admin/sync', label: 'Sync health', icon: <Activity className="h-5 w-5" />, roles: [UserRole.ADMIN] },
 ];

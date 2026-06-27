@@ -28,7 +28,7 @@ export default async function AdminSyncPage() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
         <StatCard label="Total feeds" value={feeds.length} />
         <StatCard label="Healthy" value={countBy(SyncStatus.SUCCESS)} accent="text-status-completed" />
         <StatCard label="Failing" value={failing} accent={failing > 0 ? 'text-status-problem' : undefined} />

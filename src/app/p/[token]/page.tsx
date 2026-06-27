@@ -48,6 +48,11 @@ export default async function PublicStatusPage({ params }: { params: Promise<{ t
       </header>
 
       <main className="mx-auto max-w-2xl px-6 pb-16">
+        {property.imageUrl && (
+          <div className="relative mb-5 aspect-[16/9] w-full overflow-hidden rounded-2xl bg-navy-100 sm:aspect-[21/9]">
+            <Image src={property.imageUrl} alt={property.name} fill sizes="(max-width:768px) 100vw, 640px" className="object-cover" priority />
+          </div>
+        )}
         <p className="text-sm font-medium text-brand-700">Turnover status</p>
         <h1 className="mt-1 text-2xl font-bold text-navy-900">{property.name}</h1>
         {(property.city || property.state) && (

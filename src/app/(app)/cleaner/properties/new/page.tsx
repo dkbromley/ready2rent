@@ -35,6 +35,10 @@ export default async function NewCleanerPropertyPage() {
             <input name="feedUrl" type="url" required placeholder="https://www.airbnb.com/calendar/ical/12345.ics?s=…" className={inputClass} />
           </Field>
 
+          <Field label="Property photo (optional)">
+            <input name="image" type="file" accept="image/*" className="block w-full text-sm text-navy-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100" />
+          </Field>
+
           <div className="grid grid-cols-2 gap-4">
             <Field label="Default checkout time">
               <input name="defaultCheckOutTime" type="time" defaultValue="10:00" className={inputClass} />

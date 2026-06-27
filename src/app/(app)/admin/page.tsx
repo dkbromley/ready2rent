@@ -18,7 +18,7 @@ export default async function AdminOverviewPage() {
         action={<LinkButton href="/admin/sync" variant="secondary"><Activity className="h-4 w-4" /> Sync health</LinkButton>}
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
         <StatCard label="Users" value={o.users} />
         <StatCard label="Organizations" value={o.orgs} />
         <StatCard label="Properties" value={o.properties} />

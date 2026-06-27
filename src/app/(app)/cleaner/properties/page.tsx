@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Plus, Home, CalendarCheck, Mail, AlertTriangle, Trash2 } from 'lucide-react';
 import { UserRole } from '@prisma/client';
 import { requireRole } from '@/lib/rbac';
@@ -36,6 +37,11 @@ export default async function CleanerPropertiesPage() {
             return (
               <div key={p.id} className="card flex flex-col p-5">
                 <Link href={`/properties/${p.id}`} className="flex-1">
+                  {p.imageUrl && (
+                    <div className="relative mb-3 aspect-[16/9] overflow-hidden rounded-xl bg-navy-100">
+                      <Image src={p.imageUrl} alt={p.name} fill sizes="(max-width:640px) 100vw, 320px" className="object-cover" />
+                    </div>
+                  )}
                   <div className="flex items-start justify-between">
                     <div className="rounded-xl bg-brand-50 p-2 text-brand-700">
                       <Home className="h-5 w-5" />
