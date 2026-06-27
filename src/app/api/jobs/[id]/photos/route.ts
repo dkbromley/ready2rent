@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { randomUUID } from 'node:crypto';
-import { writeFile, mkdir } from 'node:fs/promises';
-import path from 'node:path';
 import { getCurrentUser, canAccessJob } from '@/lib/rbac';
 import { prisma } from '@/lib/prisma';
+import { storeJobPhoto } from '@/lib/storage';
 
 export const runtime = 'nodejs';
 
@@ -12,9 +10,8 @@ const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic'])
 
 /**
  * Job completion photo upload.
- *
- * Dev/MVP: writes to /public/uploads and stores the public path. Swap the
- * storage block for Supabase Storage / S3 in production (see SUPABASE_* env).
+ * Stores via Supabase Storage in production (local FS fallback in dev) — see
+ * src/lib/storage.ts — then records a JobPhoto row.
  */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id: jobId } = await ctx.params;
@@ -36,16 +33,21 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return NextResponse.json({ error: 'Unsupported image type' }, { status: 400 });
   }
 
-  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
-  const filename = `${jobId}-${randomUUID()}.${ext}`;
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-  await mkdir(uploadDir, { recursive: true });
+  const ext = file.name.split('.').pop() || 'jpg';
   const bytes = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(uploadDir, filename), bytes);
 
-  const url = `/uploads/${filename}`;
+  let stored;
+  try {
+    stored = await storeJobPhoto(jobId, bytes, ext, file.type || 'image/jpeg');
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Upload failed' },
+      { status: 502 },
+    );
+  }
+
   const photo = await prisma.jobPhoto.create({
-    data: { jobId, url, uploadedByUserId: user.id },
+    data: { jobId, url: stored.url, uploadedByUserId: user.id },
   });
 
   return NextResponse.json({ ok: true, photo });
