@@ -119,7 +119,35 @@ Forward hooks already in the schema:
 - Job status transitions are validated against an allowed-transition graph
   (`JOB_NEXT_STATUSES`).
 
-## 8. Phase roadmap detail
+## 8. Performance & infrastructure
+
+Hosting: Next.js on Netlify Functions (**us-east-2**); Postgres on Supabase
+(**us-east-1**, co-located). Lessons from profiling the dashboard (which started
+at ~4.4s and is now ~0.4s warm):
+
+- **`connection_limit` must be > 1.** On the pooled (pgbouncer transaction-mode)
+  connection, `connection_limit=1` forces every `Promise.all` query to serialize
+  over a single connection. We use `connection_limit=8` so dashboard queries run
+  concurrently. The pooler is built for many client connections, so this is safe.
+- **Scope by relation, not a pre-fetched id list.** `getOwnerDashboard` filters
+  every query by `property → org membership` (`ownerPropertyScope`) instead of
+  first fetching property ids and passing `{ in: [...] }`. That removes a serial
+  round trip so the whole dashboard is one parallel batch.
+- **Co-locate DB and functions.** A cross-region hop (us-west-2 ↔ us-east-2) cost
+  ~260ms *per query*; same-region (~us-east-1 ↔ us-east-2) is ~70ms. This was the
+  single biggest win. Region can't be changed in place — migrate with
+  `scripts/migrate-region.ts` (copies data + storage between two projects).
+- **Perceived performance.** `loading.tsx` boundaries render an instant skeleton
+  + progress bar on every navigation (`components/Skeletons.tsx`); `SubmitButton`
+  (`useFormStatus`) gives server-action forms an immediate spinner;
+  `experimental.staleTimes` keeps a short client router cache so revisiting a tab
+  is instant. Mutations call `revalidatePath`, which busts that cache.
+
+Operational scripts: `npm run harden:rls` (enable RLS on all tables),
+`npm run setup:storage` (create the photos bucket), `npm run migrate:region`
+(cross-project data + storage move).
+
+## 9. Phase roadmap detail
 
 - **Phase 2 — Linen:** add a `LinenTask`/child-job relation off `TurnoverJob`
   (or emit `JobType.LINEN_*` jobs), a linen-provider dashboard, and pickup/deliver

@@ -114,6 +114,17 @@ src/app/api/jobs/[id]/photos/   Completion photo upload
 
 ---
 
+### Performance
+
+Hosted on Netlify (functions in us-east-2) + Supabase Postgres (us-east-1,
+co-located). Warm dashboard load is ~0.4s. Key choices, the hard-won ones:
+`connection_limit=8` on the pooled URL (so `Promise.all` queries don't
+serialize), relation-scoped dashboard queries (one parallel batch, no serial
+id-prefetch), DB co-located with the function region (a cross-region hop was
+~260ms/query), plus `loading.tsx` skeletons, `useFormStatus` submit spinners,
+and a short `staleTimes` router cache for instant-feeling navigation. Details and
+the region-migration script in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#8-performance--infrastructure).
+
 ## Business rules (Phase 1)
 
 - A reservation creates exactly **one** turnover job (keyed by reservation id → no
