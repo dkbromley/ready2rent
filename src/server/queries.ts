@@ -65,29 +65,32 @@ async function recentActivity(jobWhere: Prisma.TurnoverJobWhereInput): Promise<A
  * per-property timezone is still authoritative for the stored job instants.
  */
 
+/** Property-where scope for the owner/admin (relation filter, one round trip). */
+export function ownerPropertyScope(user: SessionUser): Prisma.PropertyWhereInput {
+  if (user.role === UserRole.ADMIN) return {};
+  return { ownerOrganization: { members: { some: { userId: user.id } } } };
+}
+
 export async function getOwnerScopePropertyIds(user: SessionUser): Promise<string[]> {
-  if (user.role === UserRole.ADMIN) {
-    const all = await prisma.property.findMany({ select: { id: true } });
-    return all.map((p) => p.id);
-  }
-  const orgIds = await getUserOrgIds(user.id);
   const props = await prisma.property.findMany({
-    where: { ownerOrganizationId: { in: orgIds } },
+    where: ownerPropertyScope(user),
     select: { id: true },
   });
   return props.map((p) => p.id);
 }
 
 export async function getOwnerDashboard(user: SessionUser) {
-  const propertyIds = await getOwnerScopePropertyIds(user);
   const now = new Date();
   const todayStart = startOfDay(now);
   const todayEnd = endOfDay(now);
   const weekEnd = endOfDay(addDays(now, 7));
 
-  const liveJob = {
-    propertyId: { in: propertyIds },
-    status: { notIn: [JobStatus.CANCELED] as JobStatus[] },
+  // Scope every query by the property relation so there's no serial pre-fetch —
+  // all of these run concurrently in one round of parallel queries.
+  const propScope = ownerPropertyScope(user);
+  const jobScope: Prisma.TurnoverJobWhereInput = {
+    property: propScope,
+    status: { notIn: [JobStatus.CANCELED] },
   };
 
   const [
@@ -98,10 +101,12 @@ export async function getOwnerDashboard(user: SessionUser) {
     completedToday,
     syncErrors,
     propertyCount,
+    weekly,
+    activity,
   ] = await Promise.all([
     prisma.turnoverJob.findMany({
       where: {
-        ...liveJob,
+        property: propScope,
         checkoutDateTime: { gte: todayStart, lte: weekEnd },
         status: { in: [JobStatus.NEEDS_SCHEDULING, JobStatus.SCHEDULED] },
       },
@@ -110,39 +115,27 @@ export async function getOwnerDashboard(user: SessionUser) {
       take: 12,
     }),
     prisma.turnoverJob.findMany({
-      where: { ...liveJob, sameDayTurnover: true, checkoutDateTime: { gte: todayStart } },
+      where: { ...jobScope, sameDayTurnover: true, checkoutDateTime: { gte: todayStart } },
       include: { property: true },
       orderBy: { checkoutDateTime: 'asc' },
       take: 8,
     }),
     prisma.property.findMany({
-      where: {
-        id: { in: propertyIds },
-        active: true,
-        assignedCleanerOrganizationId: null,
-        assignedCleanerUserId: null,
-      },
+      where: { ...propScope, active: true, assignedCleanerOrganizationId: null, assignedCleanerUserId: null },
       take: 8,
     }),
-    prisma.turnoverJob.count({ where: { ...liveJob, status: JobStatus.IN_PROGRESS } }),
+    prisma.turnoverJob.count({ where: { property: propScope, status: JobStatus.IN_PROGRESS } }),
     prisma.turnoverJob.count({
-      where: {
-        propertyId: { in: propertyIds },
-        status: JobStatus.COMPLETED,
-        completedAt: { gte: todayStart, lte: todayEnd },
-      },
+      where: { property: propScope, status: JobStatus.COMPLETED, completedAt: { gte: todayStart, lte: todayEnd } },
     }),
     prisma.calendarFeed.findMany({
-      where: { property: { id: { in: propertyIds } }, lastSyncStatus: SyncStatus.FAILED },
+      where: { property: propScope, lastSyncStatus: SyncStatus.FAILED },
       include: { property: true },
       take: 8,
     }),
-    prisma.property.count({ where: { id: { in: propertyIds } } }),
-  ]);
-
-  const [weekly, activity] = await Promise.all([
-    weeklyTurnoverSeries({ propertyId: { in: propertyIds } }),
-    recentActivity({ propertyId: { in: propertyIds } }),
+    prisma.property.count({ where: propScope }),
+    weeklyTurnoverSeries({ property: propScope }),
+    recentActivity({ property: propScope }),
   ]);
 
   return {
