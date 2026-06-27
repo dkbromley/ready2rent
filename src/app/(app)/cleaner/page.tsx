@@ -1,8 +1,8 @@
-import { Map } from 'lucide-react';
+import { Map, Plus, CalendarDays } from 'lucide-react';
 import { requireRole } from '@/lib/rbac';
 import { UserRole } from '@prisma/client';
 import { getCleanerDashboard } from '@/server/queries';
-import { PageHeader, StatCard, SectionTitle, EmptyState, Card } from '@/components/ui';
+import { PageHeader, StatCard, SectionTitle, EmptyState, Card, LinkButton } from '@/components/ui';
 import { JobCard } from '@/components/JobCard';
 
 export default async function CleanerDashboardPage() {
@@ -11,7 +11,16 @@ export default async function CleanerDashboardPage() {
 
   return (
     <div>
-      <PageHeader title="My jobs" subtitle="Your turnover schedule, kept in sync automatically." />
+      <PageHeader
+        title="My jobs"
+        subtitle="Your turnover schedule, kept in sync automatically."
+        action={
+          <div className="flex gap-2">
+            <LinkButton href="/cleaner/calendar" variant="secondary"><CalendarDays className="h-4 w-4" /> Calendar</LinkButton>
+            <LinkButton href="/cleaner/properties/new"><Plus className="h-4 w-4" /> Add property</LinkButton>
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Today" value={d.todays.length} />

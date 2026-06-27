@@ -17,6 +17,8 @@ import { JOB_NEXT_STATUSES } from '@/lib/status';
 import { syncFeed, syncAllActiveFeeds } from '@/server/sync/sync-service';
 import { regeneratePropertyJobs } from '@/server/sync/job-generator';
 import { notify } from '@/server/notifications';
+import { notifyOwnerOfJob } from '@/server/owner-notify';
+import { detectPlatformFromUrl } from '@/lib/feeds';
 
 // ---------------------------------------------------------------------------
 // Properties
@@ -175,6 +177,10 @@ export async function updateJobStatus(jobId: string, toStatus: JobStatus, note?:
   if (toStatus === JobStatus.COMPLETED) await notify.jobCompleted(jobId, job.propertyId);
   else if (toStatus === JobStatus.PROBLEM) await notify.jobProblem(jobId, job.propertyId);
 
+  // Owner-facing email (cleaner-led model): cleaning started / ready for arrival.
+  if (toStatus === JobStatus.IN_PROGRESS) await notifyOwnerOfJob(jobId, 'started').catch(() => undefined);
+  else if (toStatus === JobStatus.COMPLETED) await notifyOwnerOfJob(jobId, 'completed').catch(() => undefined);
+
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath('/cleaner');
   revalidatePath('/dashboard');
@@ -249,4 +255,113 @@ export async function markAllNotificationsRead() {
     data: { read: true },
   });
   revalidatePath('/notifications');
+}
+
+// ---------------------------------------------------------------------------
+// Cleaner-led onboarding: a cleaner adds a property from the owner's iCal link
+// ---------------------------------------------------------------------------
+
+const cleanerPropertySchema = z.object({
+  name: z.string().min(1, 'Property name is required').max(160),
+  feedUrl: z.string().url('Enter a valid iCal URL'),
+  platform: z.string().optional(),
+  address: z.string().max(240).optional(),
+  city: z.string().max(120).optional(),
+  state: z.string().max(60).optional(),
+  zip: z.string().max(20).optional(),
+  bedrooms: z.coerce.number().int().min(0).max(50).default(0),
+  bathrooms: z.coerce.number().int().min(0).max(50).default(0),
+  timezone: z.string().min(1).default('America/New_York'),
+  defaultCheckInTime: z.string().regex(/^\d{1,2}:\d{2}$/).default('16:00'),
+  defaultCheckOutTime: z.string().regex(/^\d{1,2}:\d{2}$/).default('10:00'),
+  notes: z.string().max(2000).optional(),
+  ownerName: z.string().max(160).optional(),
+  ownerEmail: z.string().email('Enter a valid owner email').optional().or(z.literal('')),
+  ownerPhone: z.string().max(40).optional(),
+  notifyByEmail: z.string().optional(), // checkbox "on"/undefined
+});
+
+export async function createCleanerProperty(formData: FormData) {
+  const user = await requireRole(UserRole.CLEANER, UserRole.ADMIN);
+  const parsed = cleanerPropertySchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    throw new Error(parsed.error.errors[0]?.message ?? 'Invalid property');
+  }
+  const d = parsed.data;
+
+  // The cleaner's cleaning company org manages the record.
+  const membership = await prisma.organizationMember.findFirst({
+    where: { userId: user.id, organization: { type: 'CLEANING_COMPANY' } },
+    select: { organizationId: true },
+  });
+  if (!membership) throw new Error('No cleaning organization found for this account.');
+
+  const url = normalizeFeedUrl(d.feedUrl);
+  if (!/^https?:\/\//i.test(url)) throw new Error('Feed URL must be http(s).');
+  const platform =
+    d.platform && d.platform in CalendarPlatform
+      ? (d.platform as CalendarPlatform)
+      : detectPlatformFromUrl(url);
+
+  const property = await prisma.property.create({
+    data: {
+      name: d.name,
+      address: d.address || null,
+      city: d.city || null,
+      state: d.state || null,
+      zip: d.zip || null,
+      bedrooms: d.bedrooms,
+      bathrooms: d.bathrooms,
+      timezone: d.timezone,
+      defaultCheckInTime: d.defaultCheckInTime,
+      defaultCheckOutTime: d.defaultCheckOutTime,
+      notes: d.notes || null,
+      ownerOrganizationId: membership.organizationId,
+      managementMode: 'CLEANER_MANAGED',
+      createdByUserId: user.id,
+      // Auto-assign the creating cleaner so they (and only they) see the jobs.
+      assignedCleanerOrganizationId: membership.organizationId,
+      assignedCleanerUserId: user.id,
+      // Owner contact for notifications (only if any detail provided).
+      ...(d.ownerName || d.ownerEmail || d.ownerPhone
+        ? {
+            ownerContact: {
+              create: {
+                name: d.ownerName || null,
+                email: d.ownerEmail || null,
+                phone: d.ownerPhone || null,
+                notifyByEmail: Boolean(d.notifyByEmail),
+              },
+            },
+          }
+        : {}),
+      // The calendar feed itself.
+      calendarFeeds: {
+        create: {
+          platform,
+          feedUrlEncrypted: encryptSecret(url),
+          feedUrlHash: hashFeedUrl(url),
+        },
+      },
+    },
+    include: { calendarFeeds: true },
+  });
+
+  // Immediate first sync so the schedule appears right away.
+  const feed = property.calendarFeeds[0];
+  if (feed) await syncFeed(feed.id).catch(() => undefined);
+
+  revalidatePath('/cleaner/properties');
+  revalidatePath('/cleaner');
+  redirect(`/properties/${property.id}`);
+}
+
+export async function removeProperty(propertyId: string) {
+  const user = await requireUser();
+  if (!(await canAccessProperty(user, propertyId))) throw new Error('Not authorized.');
+  // Soft-remove: deactivate the property + its feeds; preserve all history.
+  await prisma.property.update({ where: { id: propertyId }, data: { active: false } });
+  await prisma.calendarFeed.updateMany({ where: { propertyId }, data: { active: false } });
+  revalidatePath('/cleaner/properties');
+  revalidatePath('/cleaner');
 }

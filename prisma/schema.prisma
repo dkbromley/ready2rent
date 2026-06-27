@@ -32,6 +32,27 @@ enum OrganizationType {
   ADMIN
 }
 
+/// Who operationally owns a property record. CLEANER_MANAGED = a cleaner added
+/// the property from a calendar link the owner gave them; the owner is tracked
+/// as a contact (PropertyOwnerContact) and notified by email, but has no account
+/// until they claim it.
+enum ManagementMode {
+  OWNER_MANAGED
+  CLEANER_MANAGED
+}
+
+enum MessageChannel {
+  EMAIL
+  SMS
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  FAILED
+  SKIPPED
+}
+
 /// Global role on a user account. An individual may belong to multiple orgs,
 /// but their primary capability set is driven by this role.
 enum UserRole {
@@ -103,6 +124,7 @@ enum NotificationType {
   RESERVATION_CANCELED
   SAME_DAY_TURNOVER
   ASSIGNMENT
+  JOB_STARTED
   SYNC_FAILED
 }
 
@@ -127,6 +149,7 @@ model User {
   uploadedPhotos         JobPhoto[]
   notifications          Notification[]
   assignedProperties     Property[]              @relation("PropertyCleanerUser")
+  createdProperties      Property[]              @relation("PropertyCreatedBy")
   serviceProviderProfile ServiceProviderProfile?
 
   @@index([role])
@@ -185,6 +208,12 @@ model Property {
   defaultCheckOutTime  String   @default("10:00")
   notes                String?
   active               Boolean  @default(true)
+  /// Owner-led vs cleaner-led onboarding (see ManagementMode).
+  managementMode       ManagementMode @default(OWNER_MANAGED)
+  createdByUserId      String?
+  /// Stable token for the no-login public status page the owner-notification
+  /// emails link to (/p/<publicToken>).
+  publicToken          String?  @unique @default(cuid())
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -198,15 +227,19 @@ model Property {
   assignedCleanerOrganization Organization? @relation("PropertyCleanerOrg", fields: [assignedCleanerOrganizationId], references: [id])
   assignedCleanerUser       User?         @relation("PropertyCleanerUser", fields: [assignedCleanerUserId], references: [id])
   linenProviderOrganization Organization? @relation("PropertyLinenOrg", fields: [linenProviderOrganizationId], references: [id])
+  createdByUser             User?         @relation("PropertyCreatedBy", fields: [createdByUserId], references: [id])
 
   calendarFeeds CalendarFeed[]
   reservations  Reservation[]
   turnoverJobs  TurnoverJob[]
   syncLogs      SyncLog[]
+  ownerContact  PropertyOwnerContact?
+  messageLogs   MessageLog[]
 
   @@index([ownerOrganizationId])
   @@index([assignedCleanerOrganizationId])
   @@index([assignedCleanerUserId])
+  @@index([managementMode])
 }
 
 model CalendarFeed {
@@ -396,6 +429,54 @@ model SyncLog {
   @@index([propertyId])
   @@index([status])
   @@index([startedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Off-platform owner contact (cleaner-led model) + outbound message log
+// ---------------------------------------------------------------------------
+
+/// The real property owner when a cleaner added the property. No user account —
+/// just who to notify (email v1, SMS later) and a token to claim the property
+/// and convert into a platform owner.
+model PropertyOwnerContact {
+  id              String    @id @default(cuid())
+  propertyId      String    @unique
+  name            String?
+  email           String?
+  phone           String?
+  notifyByEmail   Boolean   @default(true)
+  notifyBySms     Boolean   @default(false)
+  unsubscribed    Boolean   @default(false)
+  claimToken      String    @unique @default(cuid())
+  claimedByUserId String?
+  claimedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+}
+
+/// Audit log of outbound owner notifications (email v1). Mirrors SyncLog
+/// discipline: every send recorded with status, for idempotency + debugging.
+model MessageLog {
+  id             String         @id @default(cuid())
+  propertyId     String?
+  jobId          String?
+  ownerContactId String?
+  channel        MessageChannel
+  type           String
+  toAddress      String
+  subject        String?
+  status         MessageStatus  @default(QUEUED)
+  providerId     String?
+  error          String?
+  createdAt      DateTime       @default(now())
+
+  property Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+
+  @@index([propertyId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 // ---------------------------------------------------------------------------

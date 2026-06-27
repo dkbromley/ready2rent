@@ -151,6 +151,43 @@ export async function getCleanerDashboard(user: SessionUser) {
   return { todays, tomorrows, thisWeek, sameDay, problems };
 }
 
+/** Properties a cleaner manages or is assigned to (for the cleaner property list). */
+export async function listCleanerProperties(user: SessionUser) {
+  const orgIds = await getUserOrgIds(user.id);
+  return prisma.property.findMany({
+    where: {
+      active: true,
+      OR: [{ assignedCleanerUserId: user.id }, { assignedCleanerOrganizationId: { in: orgIds } }],
+    },
+    include: {
+      calendarFeeds: true,
+      ownerContact: true,
+      _count: { select: { reservations: true, turnoverJobs: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+/** Serializable turnover jobs in the cleaner's scope, for the calendar view. */
+export async function getCleanerCalendarJobs(user: SessionUser) {
+  const scope = await getCleanerJobScope(user);
+  const jobs = await prisma.turnoverJob.findMany({
+    where: { ...scope, status: { not: JobStatus.CANCELED } },
+    include: { property: { select: { name: true, city: true, state: true, timezone: true } } },
+    orderBy: { checkoutDateTime: 'asc' },
+  });
+  return jobs.map((j) => ({
+    id: j.id,
+    status: j.status,
+    sameDayTurnover: j.sameDayTurnover,
+    checkoutISO: j.checkoutDateTime.toISOString(),
+    nextCheckInISO: j.nextCheckInDateTime ? j.nextCheckInDateTime.toISOString() : null,
+    turnoverWindowMinutes: j.turnoverWindowMinutes,
+    propertyName: j.property.name,
+    timezone: j.property.timezone,
+  }));
+}
+
 export async function listProperties(user: SessionUser) {
   const propertyIds = await getOwnerScopePropertyIds(user);
   return prisma.property.findMany({

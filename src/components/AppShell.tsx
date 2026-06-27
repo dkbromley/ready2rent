@@ -32,6 +32,8 @@ const NAV: NavItem[] = [
   { href: '/properties', label: 'Properties', icon: <Home className="h-5 w-5" />, roles: [UserRole.OWNER, UserRole.ADMIN] },
   { href: '/jobs', label: 'Turnovers', icon: <CalendarDays className="h-5 w-5" />, roles: [UserRole.OWNER, UserRole.ADMIN] },
   { href: '/cleaner', label: 'My jobs', icon: <Sparkles className="h-5 w-5" />, roles: [UserRole.CLEANER, UserRole.ADMIN] },
+  { href: '/cleaner/calendar', label: 'Calendar', icon: <CalendarDays className="h-5 w-5" />, roles: [UserRole.CLEANER, UserRole.ADMIN] },
+  { href: '/cleaner/properties', label: 'My properties', icon: <Home className="h-5 w-5" />, roles: [UserRole.CLEANER, UserRole.ADMIN] },
   { href: '/admin', label: 'Admin', icon: <Users className="h-5 w-5" />, roles: [UserRole.ADMIN] },
   { href: '/admin/sync', label: 'Sync health', icon: <Activity className="h-5 w-5" />, roles: [UserRole.ADMIN] },
 ];
@@ -52,6 +54,12 @@ export function AppShell({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const items = NAV.filter((i) => i.roles.includes(role));
+
+  // Active = the item whose href is the longest matching prefix of the path, so
+  // /cleaner/properties highlights "My properties", not "My jobs".
+  const activeHref = items
+    .filter((i) => pathname === i.href || pathname.startsWith(i.href + '/'))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
     <div className="min-h-screen bg-sand-50">
@@ -98,7 +106,7 @@ export function AppShell({
         >
           <nav className="flex flex-col gap-1 p-3">
             {items.map((item) => {
-              const active = pathname === item.href || pathname.startsWith(item.href + '/');
+              const active = item.href === activeHref;
               return (
                 <Link
                   key={item.href}

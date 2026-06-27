@@ -11,7 +11,7 @@ import {
   Bath,
   CalendarClock,
 } from 'lucide-react';
-import { CalendarPlatform } from '@prisma/client';
+import { CalendarPlatform, UserRole } from '@prisma/client';
 import { requireUser, canAccessProperty } from '@/lib/rbac';
 import { getPropertyDetail, listAssignableCleaners } from '@/server/queries';
 import {
@@ -219,7 +219,8 @@ export default async function PropertyDetailPage({
             </Card>
           </section>
 
-          {/* Assign cleaner */}
+          {/* Assign cleaner (owner/admin only) */}
+          {user.role !== UserRole.CLEANER && (
           <section>
             <SectionTitle>Assigned cleaner</SectionTitle>
             <Card>
@@ -252,6 +253,7 @@ export default async function PropertyDetailPage({
               </form>
             </Card>
           </section>
+          )}
 
           {/* Notes */}
           {property.notes && (
