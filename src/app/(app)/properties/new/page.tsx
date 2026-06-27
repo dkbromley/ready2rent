@@ -3,7 +3,8 @@ import { ArrowLeft } from 'lucide-react';
 import { requireRole } from '@/lib/rbac';
 import { UserRole } from '@prisma/client';
 import { createProperty } from '@/server/actions';
-import { PageHeader, Card, Button, Field, inputClass } from '@/components/ui';
+import { PageHeader, Card, Field, inputClass } from '@/components/ui';
+import { SubmitButton } from '@/components/SubmitButton';
 import { COMMON_TIMEZONES } from '@/lib/timezones';
 
 export default async function NewPropertyPage() {
@@ -72,7 +73,7 @@ export default async function NewPropertyPage() {
             <Link href="/properties" className="rounded-xl px-4 py-2 text-sm font-medium text-navy-600 hover:bg-navy-50">
               Cancel
             </Link>
-            <Button type="submit">Create property</Button>
+            <SubmitButton pendingText="Creating…">Create property</SubmitButton>
           </div>
         </form>
       </Card>

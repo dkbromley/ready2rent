@@ -4,7 +4,8 @@ import { SyncStatus, UserRole } from '@prisma/client';
 import { requireRole } from '@/lib/rbac';
 import { getAdminSyncHealth } from '@/server/queries';
 import { triggerAllSync, triggerFeedSync } from '@/server/actions';
-import { PageHeader, Card, Button, StatCard, SectionTitle } from '@/components/ui';
+import { PageHeader, Card, StatCard, SectionTitle } from '@/components/ui';
+import { SubmitButton } from '@/components/SubmitButton';
 import { SyncStatusBadge } from '@/components/StatusBadge';
 import { formatInTz } from '@/lib/datetime';
 
@@ -23,7 +24,7 @@ export default async function AdminSyncPage() {
         subtitle="Monitor feed ingestion across the platform."
         action={
           <form action={triggerAllSync}>
-            <Button type="submit"><RefreshCw className="h-4 w-4" /> Sync all feeds</Button>
+            <SubmitButton pendingText="Syncing…"><RefreshCw className="h-4 w-4" /> Sync all feeds</SubmitButton>
           </form>
         }
       />

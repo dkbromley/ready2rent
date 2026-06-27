@@ -3,7 +3,8 @@ import { ArrowLeft, Info } from 'lucide-react';
 import { UserRole } from '@prisma/client';
 import { requireRole } from '@/lib/rbac';
 import { createCleanerProperty } from '@/server/actions';
-import { PageHeader, Card, Button, Field, inputClass } from '@/components/ui';
+import { PageHeader, Card, Field, inputClass } from '@/components/ui';
+import { SubmitButton } from '@/components/SubmitButton';
 import { COMMON_TIMEZONES } from '@/lib/timezones';
 
 export default async function NewCleanerPropertyPage() {
@@ -99,7 +100,7 @@ export default async function NewCleanerPropertyPage() {
             <Link href="/cleaner/properties" className="rounded-xl px-4 py-2 text-sm font-medium text-navy-600 hover:bg-navy-50">
               Cancel
             </Link>
-            <Button type="submit">Add &amp; import schedule</Button>
+            <SubmitButton pendingText="Importing…">Add &amp; import schedule</SubmitButton>
           </div>
         </form>
       </Card>

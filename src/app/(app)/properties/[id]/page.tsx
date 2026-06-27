@@ -23,7 +23,6 @@ import {
 import {
   PageHeader,
   Card,
-  Button,
   Field,
   inputClass,
   SectionTitle,
@@ -32,6 +31,7 @@ import {
 } from '@/components/ui';
 import { JobCard } from '@/components/JobCard';
 import { PropertyImageUpload } from '@/components/PropertyImageUpload';
+import { SubmitButton } from '@/components/SubmitButton';
 import { ReservationStatusBadge, SyncStatusBadge } from '@/components/StatusBadge';
 import { formatInTz } from '@/lib/datetime';
 import { formatTurnoverWindow } from '@/lib/status';
@@ -85,9 +85,9 @@ export default async function PropertyDetailPage({
         subtitle={[property.address, property.city, property.state, property.zip].filter(Boolean).join(', ') || undefined}
         action={
           <form action={triggerPropertySync.bind(null, property.id)}>
-            <Button variant="secondary" type="submit">
+            <SubmitButton variant="secondary" pendingText="Syncing…">
               <RefreshCw className="h-4 w-4" /> Sync now
-            </Button>
+            </SubmitButton>
           </form>
         }
       />
@@ -234,9 +234,9 @@ export default async function PropertyDetailPage({
                 <Field label="iCal export URL" hint="Find this in your listing's calendar export settings.">
                   <input name="feedUrl" type="url" required placeholder="https://www.airbnb.com/calendar/ical/…" className={inputClass} />
                 </Field>
-                <Button type="submit" className="w-full">
+                <SubmitButton className="w-full" pendingText="Connecting…">
                   <Plus className="h-4 w-4" /> Connect &amp; sync
-                </Button>
+                </SubmitButton>
               </form>
               <p className="mt-2 text-xs text-navy-400">
                 We never ask for your Airbnb/Vrbo password — only the public iCal link. URLs are encrypted at rest.
@@ -272,9 +272,9 @@ export default async function PropertyDetailPage({
                     </optgroup>
                   )}
                 </select>
-                <Button type="submit" variant="secondary" className="w-full">
+                <SubmitButton variant="secondary" className="w-full" pendingText="Saving…">
                   Save assignment
-                </Button>
+                </SubmitButton>
               </form>
             </Card>
           </section>
