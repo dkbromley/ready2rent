@@ -77,7 +77,7 @@ export async function notifyOwnerOfJob(jobId: string, kind: Kind): Promise<void>
     </div>
     <p style="font-size:13px;color:#85a3ca;line-height:1.5">
       You're getting this because ${escapeHtml(cleaner)} cleans this property for you and added it to TurnReady.
-      Want to track every turnover yourself? <a href="${base}/signup" style="color:#138585">Join free</a>.
+      Want to track every turnover yourself? <a href="${base}/claim/${contact.claimToken}" style="color:#138585">Claim this property free</a>.
     </p>
     <p style="font-size:12px;color:#adc3dd">
       <a href="${unsubUrl}" style="color:#adc3dd">Unsubscribe from these updates</a>
