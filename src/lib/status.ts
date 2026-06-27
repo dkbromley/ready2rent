@@ -75,6 +75,16 @@ export const JOB_NEXT_STATUSES: Record<JobStatus, JobStatus[]> = {
   CANCELED: [],
 };
 
+/** Human duration from minutes: "—" / "45m" / "3h" / "2h 15m". */
+export function formatMinutes(minutes: number | null): string {
+  if (minutes == null) return '—';
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
 export function formatTurnoverWindow(minutes: number | null): string {
   if (minutes == null) return 'No next guest';
   if (minutes < 0) return 'Overlap (check dates)';
