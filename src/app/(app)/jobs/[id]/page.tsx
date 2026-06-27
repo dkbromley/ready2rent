@@ -1,0 +1,184 @@
+import Link from 'next/link';
+import Image from 'next/image';
+import { notFound, redirect } from 'next/navigation';
+import {
+  ArrowLeft,
+  LogOut,
+  LogIn,
+  Timer,
+  MapPin,
+  Bed,
+  Bath,
+  Home,
+  Clock,
+} from 'lucide-react';
+import { UserRole } from '@prisma/client';
+import { requireUser, canAccessJob } from '@/lib/rbac';
+import { getJobDetail } from '@/server/queries';
+import { PageHeader, Card, SectionTitle } from '@/components/ui';
+import { JobStatusBadge, PriorityBadge, SameDayBadge } from '@/components/StatusBadge';
+import { JobStatusActions, JobNotes } from '@/components/JobActions';
+import { JobPhotoUpload } from '@/components/JobPhotoUpload';
+import { formatInTz } from '@/lib/datetime';
+import { formatTurnoverWindow, JOB_STATUS_META } from '@/lib/status';
+
+export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const user = await requireUser();
+  if (!(await canAccessJob(user, id))) redirect('/dashboard');
+
+  const job = await getJobDetail(id);
+  if (!job) notFound();
+
+  const tz = job.property.timezone;
+  const isOwner = user.role === UserRole.OWNER || user.role === UserRole.ADMIN;
+  const isCleaner = user.role === UserRole.CLEANER || user.role === UserRole.ADMIN;
+  const backHref = user.role === UserRole.CLEANER ? '/cleaner' : '/jobs';
+
+  return (
+    <div>
+      <Link href={backHref} className="mb-4 inline-flex items-center gap-1 text-sm text-navy-500 hover:text-navy-700">
+        <ArrowLeft className="h-4 w-4" /> Back
+      </Link>
+
+      <PageHeader
+        title={job.property.name}
+        subtitle={[job.property.city, job.property.state].filter(Boolean).join(', ') || undefined}
+        action={
+          <div className="flex items-center gap-2">
+            {job.sameDayTurnover && <SameDayBadge />}
+            <PriorityBadge priority={job.priority} />
+            <JobStatusBadge status={job.status} />
+          </div>
+        }
+      />
+
+      <div className="grid gap-8 lg:grid-cols-3">
+        <div className="space-y-8 lg:col-span-2">
+          {/* Turnover window */}
+          <Card>
+            <SectionTitle>Turnover window</SectionTitle>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-red-50 p-2"><LogOut className="h-5 w-5 text-status-problem" /></div>
+                <div>
+                  <p className="text-xs text-navy-400">Checkout</p>
+                  <p className="font-semibold text-navy-900">{formatInTz(job.checkoutDateTime, tz)}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-teal-50 p-2"><LogIn className="h-5 w-5 text-status-available" /></div>
+                <div>
+                  <p className="text-xs text-navy-400">Next check-in</p>
+                  <p className="font-semibold text-navy-900">
+                    {job.nextCheckInDateTime ? formatInTz(job.nextCheckInDateTime, tz) : 'No next guest'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-navy-50 p-2"><Timer className="h-5 w-5 text-navy-500" /></div>
+                <div>
+                  <p className="text-xs text-navy-400">Window</p>
+                  <p className="font-semibold text-navy-900">{formatTurnoverWindow(job.turnoverWindowMinutes)}</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Status actions */}
+          <Card>
+            <SectionTitle>Update status</SectionTitle>
+            <JobStatusActions jobId={job.id} current={job.status} />
+          </Card>
+
+          {/* Notes */}
+          <Card>
+            <SectionTitle>Notes</SectionTitle>
+            <JobNotes
+              jobId={job.id}
+              canEditOwner={isOwner}
+              canEditCleaner={isCleaner}
+              ownerNotes={job.ownerNotes}
+              cleanerNotes={job.cleanerNotes}
+            />
+          </Card>
+
+          {/* Photos */}
+          <Card>
+            <SectionTitle action={isCleaner ? <JobPhotoUpload jobId={job.id} /> : undefined}>
+              Completion photos
+            </SectionTitle>
+            {job.photos.length === 0 ? (
+              <p className="text-sm text-navy-500">No photos uploaded yet.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {job.photos.map((photo) => (
+                  <a key={photo.id} href={photo.url} target="_blank" rel="noreferrer" className="group relative aspect-square overflow-hidden rounded-xl bg-navy-100">
+                    <Image
+                      src={photo.url}
+                      alt={photo.caption ?? 'Completion photo'}
+                      fill
+                      sizes="200px"
+                      className="object-cover transition group-hover:scale-105"
+                    />
+                  </a>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-8">
+          <Card>
+            <SectionTitle>Property</SectionTitle>
+            <Link href={`/properties/${job.propertyId}`} className="flex items-center gap-2 font-medium text-brand-700 hover:underline">
+              <Home className="h-4 w-4" /> {job.property.name}
+            </Link>
+            {(job.property.address || job.property.city) && (
+              <p className="mt-2 flex items-start gap-1.5 text-sm text-navy-500">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                {[job.property.address, job.property.city, job.property.state, job.property.zip].filter(Boolean).join(', ')}
+              </p>
+            )}
+            <div className="mt-3 flex gap-4 text-sm text-navy-600">
+              <span className="inline-flex items-center gap-1"><Bed className="h-4 w-4 text-navy-400" /> {job.property.bedrooms}</span>
+              <span className="inline-flex items-center gap-1"><Bath className="h-4 w-4 text-navy-400" /> {job.property.bathrooms}</span>
+            </div>
+            {job.property.notes && (
+              <p className="mt-3 whitespace-pre-wrap rounded-xl bg-navy-50 p-3 text-sm text-navy-600">{job.property.notes}</p>
+            )}
+          </Card>
+
+          {/* History */}
+          <Card>
+            <SectionTitle>History</SectionTitle>
+            {job.statusHistory.length === 0 ? (
+              <p className="text-sm text-navy-500">No history yet.</p>
+            ) : (
+              <ol className="space-y-3">
+                {job.statusHistory.map((h) => (
+                  <li key={h.id} className="flex gap-3 text-sm">
+                    <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${JOB_STATUS_META[h.toStatus].dot}`} />
+                    <div>
+                      <p className="font-medium text-navy-800">
+                        {h.fromStatus ? `${JOB_STATUS_META[h.fromStatus].label} → ` : ''}
+                        {JOB_STATUS_META[h.toStatus].label}
+                      </p>
+                      {h.note && <p className="text-navy-500">{h.note}</p>}
+                      <p className="mt-0.5 flex items-center gap-1 text-xs text-navy-400">
+                        <Clock className="h-3 w-3" />
+                        {formatInTz(h.createdAt, tz, 'MMM d, h:mm a')}
+                        {h.changedByUser?.name ? ` · ${h.changedByUser.name}` : ''}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,421 @@
+// TurnReady — Prisma schema
+// Vacation rental turnover operations platform.
+//
+// Design notes:
+// - The reservation/job model is provider-agnostic. iCal is the first ingestion
+//   provider; direct APIs (Airbnb/Vrbo/Guesty/Hostaway/...) attach later WITHOUT
+//   changing Reservation or TurnoverJob. `sourcePlatform` + `externalUid` are the
+//   stable identity used for change detection regardless of provider.
+// - History is never destroyed automatically. Reservations that vanish from a feed
+//   are flagged POSSIBLY_CANCELED, not deleted. Jobs carry full status history.
+
+generator client {
+  provider      = "prisma-client-js"
+  // "native" for local dev; "rhel-openssl-3.0.x" for Netlify/AWS Lambda runtime.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum OrganizationType {
+  OWNER
+  CLEANING_COMPANY
+  LINEN_COMPANY
+  ADMIN
+}
+
+/// Global role on a user account. An individual may belong to multiple orgs,
+/// but their primary capability set is driven by this role.
+enum UserRole {
+  OWNER
+  CLEANER
+  LINEN
+  ADMIN
+}
+
+/// Role of a user *within* a specific organization.
+enum MemberRole {
+  OWNER // org admin / account holder
+  MANAGER
+  MEMBER
+}
+
+enum CalendarPlatform {
+  AIRBNB
+  VRBO
+  MANUAL
+  OTHER
+}
+
+enum ReservationStatus {
+  ACTIVE
+  CHANGED
+  POSSIBLY_CANCELED
+  CANCELED
+}
+
+enum JobStatus {
+  NEEDS_SCHEDULING
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  PROBLEM
+  CANCELED
+}
+
+enum JobPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+/// Forward-compatible job kinds. Phase 1 only emits TURNOVER. Phase 2 linen
+/// tasks (pickup/wash/delivery) reuse the same job machinery + history + photos.
+enum JobType {
+  TURNOVER
+  LINEN_PICKUP
+  LINEN_WASH
+  LINEN_DELIVERY
+}
+
+enum SyncStatus {
+  RUNNING
+  SUCCESS
+  PARTIAL
+  FAILED
+}
+
+enum NotificationType {
+  JOB_CREATED
+  JOB_CHANGED
+  JOB_COMPLETED
+  JOB_CANCELED
+  RESERVATION_CHANGED
+  RESERVATION_CANCELED
+  SAME_DAY_TURNOVER
+  ASSIGNMENT
+  SYNC_FAILED
+}
+
+// ---------------------------------------------------------------------------
+// Identity & org membership
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  name         String?
+  email        String   @unique
+  passwordHash String?
+  role         UserRole @default(OWNER)
+  phone        String?
+  image        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships            OrganizationMember[]
+  assignedJobs           TurnoverJob[]           @relation("JobAssignee")
+  statusChanges          JobStatusHistory[]
+  uploadedPhotos         JobPhoto[]
+  notifications          Notification[]
+  assignedProperties     Property[]              @relation("PropertyCleanerUser")
+  serviceProviderProfile ServiceProviderProfile?
+
+  @@index([role])
+}
+
+model Organization {
+  id        String           @id @default(cuid())
+  name      String
+  type      OrganizationType
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  members                OrganizationMember[]
+  ownedProperties        Property[]              @relation("PropertyOwnerOrg")
+  cleanerForProperties   Property[]              @relation("PropertyCleanerOrg")
+  linenForProperties     Property[]              @relation("PropertyLinenOrg")
+  assignedJobs           TurnoverJob[]           @relation("JobAssignedOrg")
+  serviceProviderProfile ServiceProviderProfile?
+
+  @@index([type])
+}
+
+model OrganizationMember {
+  id             String     @id @default(cuid())
+  organizationId String
+  userId         String
+  role           MemberRole @default(MEMBER)
+  createdAt      DateTime   @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Properties & calendar feeds
+// ---------------------------------------------------------------------------
+
+model Property {
+  id                   String   @id @default(cuid())
+  ownerOrganizationId  String
+  name                 String
+  address              String?
+  city                 String?
+  state                String?
+  zip                  String?
+  bedrooms             Int      @default(0)
+  bathrooms            Int      @default(0)
+  /// IANA timezone (e.g. "America/New_York"). Used to resolve checkout/checkin
+  /// wall-clock times into absolute instants for turnover-window math.
+  timezone             String   @default("America/New_York")
+  /// Wall-clock "HH:mm" defaults applied when a feed event has no explicit time.
+  defaultCheckInTime   String   @default("16:00")
+  defaultCheckOutTime  String   @default("10:00")
+  notes                String?
+  active               Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Assignment: a property can be serviced by a cleaning org and/or a specific
+  // cleaner user, and (Phase 2) a linen org.
+  assignedCleanerOrganizationId String?
+  assignedCleanerUserId         String?
+  linenProviderOrganizationId   String?
+
+  ownerOrganization         Organization  @relation("PropertyOwnerOrg", fields: [ownerOrganizationId], references: [id], onDelete: Cascade)
+  assignedCleanerOrganization Organization? @relation("PropertyCleanerOrg", fields: [assignedCleanerOrganizationId], references: [id])
+  assignedCleanerUser       User?         @relation("PropertyCleanerUser", fields: [assignedCleanerUserId], references: [id])
+  linenProviderOrganization Organization? @relation("PropertyLinenOrg", fields: [linenProviderOrganizationId], references: [id])
+
+  calendarFeeds CalendarFeed[]
+  reservations  Reservation[]
+  turnoverJobs  TurnoverJob[]
+  syncLogs      SyncLog[]
+
+  @@index([ownerOrganizationId])
+  @@index([assignedCleanerOrganizationId])
+  @@index([assignedCleanerUserId])
+}
+
+model CalendarFeed {
+  id         String           @id @default(cuid())
+  propertyId String
+  platform   CalendarPlatform
+  /// Feed URLs are SENSITIVE. Stored AES-256-GCM encrypted; never logged.
+  feedUrlEncrypted String
+  /// SHA-256 of the normalized URL, used to dedupe feeds without decrypting.
+  feedUrlHash      String
+  active     Boolean          @default(true)
+  lastSyncedAt   DateTime?
+  lastSyncStatus SyncStatus?
+  lastSyncError  String?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  property     Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  reservations Reservation[]
+  syncLogs     SyncLog[]
+
+  @@unique([propertyId, feedUrlHash])
+  @@index([propertyId])
+  @@index([active])
+}
+
+// ---------------------------------------------------------------------------
+// Reservations (normalized, provider-agnostic)
+// ---------------------------------------------------------------------------
+
+model Reservation {
+  id             String            @id @default(cuid())
+  propertyId     String
+  calendarFeedId String
+  /// Stable identity from the provider (iCal UID, or API reservation id later).
+  externalUid    String
+  sourcePlatform CalendarPlatform
+  summary        String?
+  /// Resolved absolute instants (UTC) for the stay boundaries.
+  checkInDate    DateTime
+  checkOutDate   DateTime
+  /// Exactly what the provider sent (for audit / re-normalization).
+  rawStart       DateTime
+  rawEnd         DateTime
+  status         ReservationStatus @default(ACTIVE)
+  lastSeenAt     DateTime          @default(now())
+  /// Original provider payload (VEVENT fields, or API JSON).
+  rawPayload     Json?
+  /// Soft duplicate detection across feeds (same property + overlapping dates).
+  duplicateOfId  String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  calendarFeed CalendarFeed @relation(fields: [calendarFeedId], references: [id], onDelete: Cascade)
+  duplicateOf  Reservation? @relation("ReservationDuplicate", fields: [duplicateOfId], references: [id])
+  duplicates   Reservation[] @relation("ReservationDuplicate")
+  turnoverJob  TurnoverJob?
+
+  @@unique([calendarFeedId, externalUid])
+  @@index([propertyId])
+  @@index([checkOutDate])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Turnover jobs (+ linen tasks in Phase 2 via JobType)
+// ---------------------------------------------------------------------------
+
+model TurnoverJob {
+  id            String  @id @default(cuid())
+  propertyId    String
+  /// One turnover job per reservation. Linen sub-tasks (Phase 2) will hang off
+  /// this via a parent relation (added later) but reuse the same status engine.
+  reservationId String  @unique
+  type          JobType @default(TURNOVER)
+
+  assignedOrganizationId String?
+  assignedUserId         String?
+
+  checkoutDateTime    DateTime
+  nextCheckInDateTime DateTime?
+  /// True when a new guest checks in the same calendar day as checkout — the
+  /// high-pressure "same-day turnover" cleaners must be warned about.
+  sameDayTurnover     Boolean  @default(false)
+  /// Minutes between checkout and next check-in (null = no known next stay).
+  turnoverWindowMinutes Int?
+
+  status   JobStatus   @default(NEEDS_SCHEDULING)
+  priority JobPriority @default(NORMAL)
+
+  ownerNotes   String?
+  cleanerNotes String?
+
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  property             Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  reservation          Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  assignedOrganization Organization? @relation("JobAssignedOrg", fields: [assignedOrganizationId], references: [id])
+  assignedUser         User?         @relation("JobAssignee", fields: [assignedUserId], references: [id])
+
+  statusHistory JobStatusHistory[]
+  photos        JobPhoto[]
+  notifications Notification[]
+
+  @@index([propertyId])
+  @@index([assignedOrganizationId])
+  @@index([assignedUserId])
+  @@index([status])
+  @@index([checkoutDateTime])
+}
+
+model JobStatusHistory {
+  id              String     @id @default(cuid())
+  jobId           String
+  fromStatus      JobStatus?
+  toStatus        JobStatus
+  changedByUserId String?
+  note            String?
+  createdAt       DateTime   @default(now())
+
+  job           TurnoverJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  changedByUser User?       @relation(fields: [changedByUserId], references: [id])
+
+  @@index([jobId])
+}
+
+model JobPhoto {
+  id               String   @id @default(cuid())
+  jobId            String
+  url              String
+  caption          String?
+  uploadedByUserId String?
+  createdAt        DateTime @default(now())
+
+  job            TurnoverJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  uploadedByUser User?       @relation(fields: [uploadedByUserId], references: [id])
+
+  @@index([jobId])
+}
+
+// ---------------------------------------------------------------------------
+// Notifications & sync observability
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id         String           @id @default(cuid())
+  userId     String
+  type       NotificationType
+  title      String
+  body       String?
+  jobId      String?
+  propertyId String?
+  read       Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  TurnoverJob? @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([userId, read])
+}
+
+model SyncLog {
+  id             String     @id @default(cuid())
+  calendarFeedId String?
+  propertyId     String?
+  status         SyncStatus
+  message        String?
+  reservationsFound Int     @default(0)
+  created        Int        @default(0)
+  updated        Int        @default(0)
+  canceled       Int        @default(0)
+  jobsCreated    Int        @default(0)
+  jobsUpdated    Int        @default(0)
+  durationMs     Int?
+  /// Failure detail. NEVER contains the raw feed URL (only host, if anything).
+  errorDetail    String?
+  startedAt      DateTime   @default(now())
+  finishedAt     DateTime?
+
+  calendarFeed CalendarFeed? @relation(fields: [calendarFeedId], references: [id], onDelete: SetNull)
+  property     Property?     @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+
+  @@index([calendarFeedId])
+  @@index([propertyId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Service provider profiles (Phase 3 marketplace — modeled now)
+// ---------------------------------------------------------------------------
+
+model ServiceProviderProfile {
+  id             String   @id @default(cuid())
+  organizationId String?  @unique
+  userId         String?  @unique
+  displayName    String
+  bio            String?
+  serviceAreas   String[] @default([])
+  basePrice      Decimal? @db.Decimal(10, 2)
+  ratingAvg      Float    @default(0)
+  ratingCount    Int      @default(0)
+  phone          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

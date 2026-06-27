@@ -1,0 +1,14 @@
+# Netlify configuration for TurnReady (Next.js App Router).
+# The official Next.js runtime handles SSR, server actions, API routes, and
+# image optimization on Netlify Functions.
+
+[build]
+  command = "npm run build"
+  # publish dir is managed by the Next.js runtime plugin.
+
+[build.environment]
+  # Prisma needs to fetch the Linux engine for the Lambda runtime at build time.
+  PRISMA_CLIENT_ENGINE_TYPE = "library"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

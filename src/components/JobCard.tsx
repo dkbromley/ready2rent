@@ -1,0 +1,67 @@
+import Link from 'next/link';
+import { LogOut, LogIn, MapPin, Timer } from 'lucide-react';
+import type { JobStatus, JobPriority } from '@prisma/client';
+import { JobStatusBadge, SameDayBadge } from '@/components/StatusBadge';
+import { formatInTz } from '@/lib/datetime';
+import { formatTurnoverWindow } from '@/lib/status';
+import { cn } from '@/lib/utils';
+
+export interface JobCardData {
+  id: string;
+  status: JobStatus;
+  priority: JobPriority;
+  checkoutDateTime: Date;
+  nextCheckInDateTime: Date | null;
+  sameDayTurnover: boolean;
+  turnoverWindowMinutes: number | null;
+  property: { name: string; city: string | null; state: string | null; timezone: string };
+}
+
+export function JobCard({ job, compact = false }: { job: JobCardData; compact?: boolean }) {
+  const tz = job.property.timezone;
+  return (
+    <Link
+      href={`/jobs/${job.id}`}
+      className={cn(
+        'card block p-4 transition hover:shadow-card-hover',
+        job.sameDayTurnover && 'ring-1 ring-status-problem/30',
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate font-semibold text-navy-900">{job.property.name}</p>
+          {(job.property.city || job.property.state) && (
+            <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-navy-400">
+              <MapPin className="h-3 w-3" />
+              {[job.property.city, job.property.state].filter(Boolean).join(', ')}
+            </p>
+          )}
+        </div>
+        <JobStatusBadge status={job.status} />
+      </div>
+
+      <div className={cn('mt-3 grid gap-2 text-sm', compact ? 'grid-cols-1' : 'sm:grid-cols-2')}>
+        <div className="flex items-center gap-2 text-navy-700">
+          <LogOut className="h-4 w-4 text-status-problem" />
+          <span className="font-medium">Out</span>
+          <span className="text-navy-500">{formatInTz(job.checkoutDateTime, tz)}</span>
+        </div>
+        <div className="flex items-center gap-2 text-navy-700">
+          <LogIn className="h-4 w-4 text-status-available" />
+          <span className="font-medium">In</span>
+          <span className="text-navy-500">
+            {job.nextCheckInDateTime ? formatInTz(job.nextCheckInDateTime, tz) : '—'}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center gap-1 rounded-full bg-navy-50 px-2.5 py-0.5 text-xs font-medium text-navy-600">
+          <Timer className="h-3 w-3" />
+          {formatTurnoverWindow(job.turnoverWindowMinutes)}
+        </span>
+        {job.sameDayTurnover && <SameDayBadge />}
+      </div>
+    </Link>
+  );
+}
