@@ -288,6 +288,15 @@ model Reservation {
   lastSeenAt     DateTime          @default(now())
   /// Original provider payload (VEVENT fields, or API JSON).
   rawPayload     Json?
+
+  // Richer fields — null for iCal-only sources, populated by PMS/API providers.
+  guestName        String?
+  guestCount       Int?
+  confirmationCode String?
+  guestPhoneLast4  String?
+  reservationUrl   String?
+  /// True when the provider gave real check-in/out times (vs property defaults).
+  hasExactTimes    Boolean           @default(false)
   /// Soft duplicate detection across feeds (same property + overlapping dates).
   duplicateOfId  String?
   createdAt      DateTime          @default(now())

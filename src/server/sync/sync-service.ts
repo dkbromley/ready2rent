@@ -100,6 +100,17 @@ export async function syncFeed(feedId: string): Promise<FeedSyncResult> {
     seenUids.add(inc.externalUid);
     const existing = existingByUid.get(inc.externalUid);
 
+    // Richer fields, shared by create + update. Null for iCal-only feeds; set by
+    // API providers. undefined is omitted by Prisma, so we coalesce to null.
+    const richFields = {
+      guestName: inc.guestName ?? null,
+      guestCount: inc.guestCount ?? null,
+      confirmationCode: inc.confirmationCode ?? null,
+      guestPhoneLast4: inc.guestPhoneLast4 ?? null,
+      reservationUrl: inc.reservationUrl ?? null,
+      hasExactTimes: inc.hasExactTimes ?? false,
+    };
+
     if (!existing) {
       await prisma.reservation.create({
         data: {
@@ -112,9 +123,11 @@ export async function syncFeed(feedId: string): Promise<FeedSyncResult> {
           checkOutDate: inc.checkOutDate,
           rawStart: inc.rawStart,
           rawEnd: inc.rawEnd,
-          status: ReservationStatus.ACTIVE,
+          // Provider may explicitly signal a cancellation (APIs); iCal never does.
+          status: inc.isCanceled ? ReservationStatus.CANCELED : ReservationStatus.ACTIVE,
           lastSeenAt: new Date(),
           rawPayload: (inc.rawPayload ?? undefined) as Prisma.InputJsonValue | undefined,
+          ...richFields,
         },
       });
       result.created++;
@@ -126,6 +139,8 @@ export async function syncFeed(feedId: string): Promise<FeedSyncResult> {
         checkInDate: existing.checkInDate,
         checkOutDate: existing.checkOutDate,
         summary: existing.summary,
+        guestCount: existing.guestCount,
+        confirmationCode: existing.confirmationCode,
       },
       inc,
     );
@@ -140,8 +155,13 @@ export async function syncFeed(feedId: string): Promise<FeedSyncResult> {
         rawEnd: inc.rawEnd,
         rawPayload: (inc.rawPayload ?? undefined) as Prisma.InputJsonValue | undefined,
         lastSeenAt: new Date(),
-        // Reservation reappeared or changed -> back to a live state.
-        status: changed ? ReservationStatus.CHANGED : ReservationStatus.ACTIVE,
+        ...richFields,
+        // Explicit cancellation wins; otherwise changed -> CHANGED, else ACTIVE.
+        status: inc.isCanceled
+          ? ReservationStatus.CANCELED
+          : changed
+            ? ReservationStatus.CHANGED
+            : ReservationStatus.ACTIVE,
       },
     });
     if (changed) result.updated++;

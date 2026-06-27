@@ -11,6 +11,10 @@ import {
   Bath,
   Home,
   Clock,
+  Users,
+  Hash,
+  ExternalLink,
+  Phone,
 } from 'lucide-react';
 import { UserRole } from '@prisma/client';
 import { requireUser, canAccessJob } from '@/lib/rbac';
@@ -149,6 +153,55 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               <p className="mt-3 whitespace-pre-wrap rounded-xl bg-navy-50 p-3 text-sm text-navy-600">{job.property.notes}</p>
             )}
           </Card>
+
+          {/* Booking details — populated by richer providers; iCal fills what it
+              can parse. Hidden entirely when nothing is available. */}
+          {(job.reservation.guestName ||
+            job.reservation.guestCount != null ||
+            job.reservation.confirmationCode ||
+            job.reservation.guestPhoneLast4 ||
+            job.reservation.reservationUrl) && (
+            <Card>
+              <SectionTitle>Booking details</SectionTitle>
+              <dl className="space-y-2 text-sm">
+                {job.reservation.guestName && (
+                  <div className="flex items-center gap-2 text-navy-700">
+                    <Users className="h-4 w-4 text-navy-400" /> {job.reservation.guestName}
+                  </div>
+                )}
+                {job.reservation.guestCount != null && (
+                  <div className="flex items-center gap-2 text-navy-700">
+                    <Users className="h-4 w-4 text-navy-400" /> {job.reservation.guestCount} guest{job.reservation.guestCount === 1 ? '' : 's'}
+                  </div>
+                )}
+                {job.reservation.confirmationCode && (
+                  <div className="flex items-center gap-2 text-navy-700">
+                    <Hash className="h-4 w-4 text-navy-400" /> {job.reservation.confirmationCode}
+                  </div>
+                )}
+                {job.reservation.guestPhoneLast4 && (
+                  <div className="flex items-center gap-2 text-navy-700">
+                    <Phone className="h-4 w-4 text-navy-400" /> ••• {job.reservation.guestPhoneLast4}
+                  </div>
+                )}
+                {job.reservation.reservationUrl && (
+                  <a
+                    href={job.reservation.reservationUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 font-medium text-brand-700 hover:underline"
+                  >
+                    <ExternalLink className="h-4 w-4" /> View on {job.reservation.sourcePlatform.toLowerCase()}
+                  </a>
+                )}
+              </dl>
+              {!job.reservation.hasExactTimes && (
+                <p className="mt-3 text-xs text-navy-400">
+                  Times shown use the property's default check-in/out (this source provides dates only).
+                </p>
+              )}
+            </Card>
+          )}
 
           {/* History */}
           <Card>

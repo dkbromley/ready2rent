@@ -7,6 +7,7 @@ import type {
   ProviderFeedContext,
   ProviderPropertyContext,
   ReservationProvider,
+  ReservationSnapshot,
 } from './types';
 import type { CalendarPlatform } from '@prisma/client';
 
@@ -77,6 +78,15 @@ export class ICalReservationProvider implements ReservationProvider {
     const uid = (event.uid ?? '').toString().trim();
     if (!uid) return null;
 
+    const description = event.description ? String(event.description) : '';
+    // Best-effort enrichment from the VEVENT description (Airbnb often includes a
+    // reservation-details URL; sometimes the phone last-4). iCal never carries
+    // guest name or party size — those stay null until a richer provider fills
+    // them. The fields exist on the model so no migration is needed when they do.
+    const reservationUrl = this.extractUrl(description);
+    const confirmationCode = this.extractConfirmationCode(reservationUrl ?? description);
+    const guestPhoneLast4 = this.extractPhoneLast4(description);
+
     return {
       externalUid: uid,
       sourcePlatform: feed.platform,
@@ -85,21 +95,26 @@ export class ICalReservationProvider implements ReservationProvider {
       checkOutDate,
       rawStart: start,
       rawEnd: end,
+      // iCal events are all-day; times are derived from property defaults.
+      hasExactTimes: false,
+      guestName: null,
+      guestCount: null,
+      confirmationCode,
+      guestPhoneLast4,
+      reservationUrl,
+      isCanceled: false,
       rawPayload: {
         uid,
         summary,
         start: start.toISOString(),
         end: end.toISOString(),
-        description: event.description ? String(event.description) : undefined,
+        description: description || undefined,
         location: event.location ? String(event.location) : undefined,
       },
     };
   }
 
-  detectChanges(
-    existing: Pick<NormalizedReservation, 'checkInDate' | 'checkOutDate' | 'summary'>,
-    incoming: NormalizedReservation,
-  ): ChangeResult {
+  detectChanges(existing: ReservationSnapshot, incoming: NormalizedReservation): ChangeResult {
     const changedFields: string[] = [];
     if (existing.checkInDate.getTime() !== incoming.checkInDate.getTime()) {
       changedFields.push('checkInDate');
@@ -110,7 +125,35 @@ export class ICalReservationProvider implements ReservationProvider {
     if ((existing.summary ?? '') !== (incoming.summary ?? '')) {
       changedFields.push('summary');
     }
+    if ((existing.guestCount ?? null) !== (incoming.guestCount ?? null)) {
+      changedFields.push('guestCount');
+    }
+    if ((existing.confirmationCode ?? '') !== (incoming.confirmationCode ?? '')) {
+      changedFields.push('confirmationCode');
+    }
     return { changed: changedFields.length > 0, changedFields };
+  }
+
+  private extractUrl(text: string): string | null {
+    const m = /(https?:\/\/[^\s]+)/i.exec(text);
+    return m ? m[1].replace(/[).,]+$/, '') : null;
+  }
+
+  /** Airbnb reservation URLs end in the confirmation code, e.g. /details/HMABCDEF. */
+  private extractConfirmationCode(text: string): string | null {
+    // Prefer the Airbnb-style code (starts with HM, uppercase).
+    const hm = /\bHM[A-Z0-9]{6,}\b/.exec(text);
+    if (hm) return hm[0];
+    // Otherwise take the last path segment of a reservation URL, ignoring the
+    // literal path keywords and requiring it to look like a code (has a digit).
+    const seg = /\/(?:details|reservations)\/([A-Za-z0-9]{6,})(?:[/?#]|$)/.exec(text);
+    if (seg && /\d/.test(seg[1])) return seg[1];
+    return null;
+  }
+
+  private extractPhoneLast4(text: string): string | null {
+    const m = /last\s*4\s*digits?\)?:?\s*(\d{4})/i.exec(text);
+    return m ? m[1] : null;
   }
 
   private async fetchText(url: string): Promise<string> {

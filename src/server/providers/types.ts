@@ -39,7 +39,37 @@ export interface NormalizedReservation {
   rawEnd: Date;
   /** Provider-native payload for audit / re-normalization. */
   rawPayload: Record<string, unknown> | null;
+
+  // --- Richer fields (Phase 6 providers). All optional so the model is
+  // forward-ready: iCal fills what it can parse; PMS/API providers (Hospitable,
+  // Hostaway, Guesty, OwnerRez, Lodgify, Airbnb/Vrbo direct) fill the rest.
+  /** Guest's full name (APIs only; iCal does not expose it). */
+  guestName?: string | null;
+  /** Party size — drives linen quantities in Phase 2 (APIs only). */
+  guestCount?: number | null;
+  /** Booking confirmation code (e.g. Airbnb HM…); iCal may parse from the URL. */
+  confirmationCode?: string | null;
+  /** Last 4 digits of guest phone (Airbnb iCal sometimes exposes this). */
+  guestPhoneLast4?: string | null;
+  /** Deep link to the reservation on the source platform. */
+  reservationUrl?: string | null;
+  /**
+   * True when the provider supplied real check-in/out clock times (APIs); false
+   * when we derived them from the property's default times (iCal all-day events).
+   */
+  hasExactTimes?: boolean;
+  /**
+   * Explicit cancellation signal. API providers can mark a reservation canceled
+   * directly instead of relying on it vanishing from the feed (iCal's only cue).
+   */
+  isCanceled?: boolean;
 }
+
+/** Subset of fields used for change detection across providers. */
+export type ReservationSnapshot = Pick<
+  NormalizedReservation,
+  'checkInDate' | 'checkOutDate' | 'summary' | 'guestCount' | 'confirmationCode'
+>;
 
 /** Result of comparing an incoming reservation against the stored one. */
 export interface ChangeResult {
@@ -63,8 +93,5 @@ export interface ReservationProvider {
   ): Promise<FetchResult>;
 
   /** Compare a stored reservation snapshot to an incoming one. */
-  detectChanges(
-    existing: Pick<NormalizedReservation, 'checkInDate' | 'checkOutDate' | 'summary'>,
-    incoming: NormalizedReservation,
-  ): ChangeResult;
+  detectChanges(existing: ReservationSnapshot, incoming: NormalizedReservation): ChangeResult;
 }
