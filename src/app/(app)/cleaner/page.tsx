@@ -1,9 +1,11 @@
-import { Map, Plus, CalendarDays } from 'lucide-react';
+import { Plus, CalendarDays, Sun, CalendarPlus, AlertTriangle, Wrench } from 'lucide-react';
 import { requireRole } from '@/lib/rbac';
 import { UserRole } from '@prisma/client';
 import { getCleanerDashboard } from '@/server/queries';
-import { PageHeader, StatCard, SectionTitle, EmptyState, Card, LinkButton } from '@/components/ui';
+import { PageHeader, StatTile, SectionTitle, EmptyState, Card, LinkButton } from '@/components/ui';
 import { JobCard } from '@/components/JobCard';
+import { WeeklyChart } from '@/components/WeeklyChart';
+import { ActivityFeed } from '@/components/ActivityFeed';
 
 export default async function CleanerDashboardPage() {
   const user = await requireRole(UserRole.CLEANER, UserRole.ADMIN);
@@ -23,31 +25,21 @@ export default async function CleanerDashboardPage() {
       />
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
-        <StatCard label="Today" value={d.todays.length} />
-        <StatCard label="Tomorrow" value={d.tomorrows.length} />
-        <StatCard
-          label="Same-day turnovers"
-          value={d.sameDay.length}
-          accent={d.sameDay.length > 0 ? 'text-status-problem' : undefined}
-        />
-        <StatCard
-          label="Problems"
-          value={d.problems.length}
-          accent={d.problems.length > 0 ? 'text-status-problem' : undefined}
-        />
+        <StatTile icon={<Sun className="h-5 w-5" />} tone="teal" label="Today" value={d.todays.length} />
+        <StatTile icon={<CalendarPlus className="h-5 w-5" />} tone="neutral" label="Tomorrow" value={d.tomorrows.length} />
+        <StatTile icon={<AlertTriangle className="h-5 w-5" />} tone="coral" label="Same-day" value={d.sameDay.length} />
+        <StatTile icon={<Wrench className="h-5 w-5" />} tone="amber" label="Problems" value={d.problems.length} />
       </div>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-3">
-        <section className="lg:col-span-2 space-y-8">
+      <div className="mt-8 grid gap-6 lg:grid-cols-3">
+        <section className="space-y-6 lg:col-span-2">
           <div>
             <SectionTitle>Today</SectionTitle>
             {d.todays.length === 0 ? (
               <EmptyState title="Nothing due today" description="Enjoy the breather — tomorrow's jobs are below." />
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
-                {d.todays.map((job) => (
-                  <JobCard key={job.id} job={job} compact />
-                ))}
+                {d.todays.map((job) => <JobCard key={job.id} job={job} compact />)}
               </div>
             )}
           </div>
@@ -58,58 +50,42 @@ export default async function CleanerDashboardPage() {
               <Card className="text-sm text-navy-500">No turnovers scheduled for tomorrow.</Card>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
-                {d.tomorrows.map((job) => (
-                  <JobCard key={job.id} job={job} compact />
-                ))}
+                {d.tomorrows.map((job) => <JobCard key={job.id} job={job} compact />)}
               </div>
             )}
           </div>
 
           <div>
-            <SectionTitle>This week</SectionTitle>
+            <SectionTitle action={<span className="text-xs text-navy-400">{d.thisWeek.length} jobs</span>}>This week</SectionTitle>
             {d.thisWeek.length === 0 ? (
               <Card className="text-sm text-navy-500">No turnovers in the next 7 days.</Card>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
-                {d.thisWeek.map((job) => (
-                  <JobCard key={job.id} job={job} compact />
-                ))}
+                {d.thisWeek.map((job) => <JobCard key={job.id} job={job} compact />)}
               </div>
             )}
           </div>
         </section>
 
-        <div className="space-y-8">
+        <div className="space-y-6">
+          <Card>
+            <SectionTitle>Turnovers this week</SectionTitle>
+            <WeeklyChart data={d.weekly} />
+          </Card>
+
           {d.problems.length > 0 && (
-            <section>
+            <div>
               <SectionTitle>Needs attention</SectionTitle>
               <div className="space-y-3">
-                {d.problems.map((job) => (
-                  <JobCard key={job.id} job={job} compact />
-                ))}
+                {d.problems.map((job) => <JobCard key={job.id} job={job} compact />)}
               </div>
-            </section>
+            </div>
           )}
 
-          {d.sameDay.length > 0 && (
-            <section>
-              <SectionTitle>Same-day turnovers</SectionTitle>
-              <div className="space-y-3">
-                {d.sameDay.map((job) => (
-                  <JobCard key={job.id} job={job} compact />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Routing placeholder (Phase 5). */}
-          <section>
-            <SectionTitle>Route</SectionTitle>
-            <Card className="flex flex-col items-center gap-2 py-8 text-center text-navy-400">
-              <Map className="h-8 w-8" />
-              <p className="text-sm">Map &amp; route optimization coming soon.</p>
-            </Card>
-          </section>
+          <Card>
+            <SectionTitle>Recent activity</SectionTitle>
+            <ActivityFeed items={d.activity} />
+          </Card>
         </div>
       </div>
     </div>

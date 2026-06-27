@@ -123,6 +123,46 @@ export function StatCard({
   return href ? <Link href={href}>{inner}</Link> : inner;
 }
 
+type Tone = 'neutral' | 'teal' | 'coral' | 'green' | 'amber';
+const TILE_ICON: Record<Tone, string> = {
+  neutral: 'bg-navy-50 text-navy-500',
+  teal: 'bg-brand-50 text-brand-700',
+  coral: 'bg-coral-50 text-coral-600',
+  green: 'bg-teal-50 text-status-completed',
+  amber: 'bg-amber-50 text-amber-700',
+};
+const TILE_VALUE: Record<Tone, string> = {
+  neutral: 'text-navy-900',
+  teal: 'text-navy-900',
+  coral: 'text-coral-600',
+  green: 'text-status-completed',
+  amber: 'text-amber-700',
+};
+
+/** Summary tile: tinted icon chip, label, big value. The dashboard stat card. */
+export function StatTile({
+  icon,
+  label,
+  value,
+  tone = 'neutral',
+  href,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+  tone?: Tone;
+  href?: string;
+}) {
+  const inner = (
+    <div className="card h-full p-4 transition hover:shadow-card-hover">
+      <span className={cn('inline-flex rounded-xl p-2', TILE_ICON[tone])}>{icon}</span>
+      <p className="mt-3 text-xs font-medium text-navy-500">{label}</p>
+      <p className={cn('mt-0.5 text-2xl font-bold tracking-tight', TILE_VALUE[tone])}>{value}</p>
+    </div>
+  );
+  return href ? <Link href={href} className="block h-full">{inner}</Link> : inner;
+}
+
 export function EmptyState({
   title,
   description,

@@ -1,17 +1,18 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { UserRole } from '@prisma/client';
-import { AlertTriangle, Home, Plus } from 'lucide-react';
+import { AlertTriangle, Home, Plus, Play, CircleCheck, Building2 } from 'lucide-react';
 import { requireUser } from '@/lib/rbac';
 import { getOwnerDashboard } from '@/server/queries';
-import { PageHeader, StatCard, SectionTitle, EmptyState, LinkButton, Card } from '@/components/ui';
+import { PageHeader, StatTile, SectionTitle, EmptyState, LinkButton, Card } from '@/components/ui';
 import { JobCard } from '@/components/JobCard';
+import { WeeklyChart } from '@/components/WeeklyChart';
+import { ActivityFeed } from '@/components/ActivityFeed';
 import { SameDayBadge } from '@/components/StatusBadge';
 import { formatInTz } from '@/lib/datetime';
-import Link from 'next/link';
 
 export default async function DashboardPage() {
   const user = await requireUser();
-  // Cleaners get their own operational view.
   if (user.role === UserRole.CLEANER) redirect('/cleaner');
 
   const d = await getOwnerDashboard(user);
@@ -28,31 +29,17 @@ export default async function DashboardPage() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
-        <StatCard label="Properties" value={d.propertyCount} href="/properties" />
-        <StatCard
-          label="Same-day turnovers"
-          value={d.sameDayTurnovers.length}
-          accent={d.sameDayTurnovers.length > 0 ? 'text-status-problem' : undefined}
-        />
-        <StatCard label="In progress" value={d.inProgress} accent="text-status-progress" />
-        <StatCard label="Completed today" value={d.completedToday} accent="text-status-completed" />
-      </div>
-
-      {/* Sync errors banner */}
       {d.syncErrors.length > 0 && (
-        <div className="mt-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-status-problem" />
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-coral-200 bg-coral-50 p-4">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-coral-600" />
           <div className="text-sm">
-            <p className="font-semibold text-red-800">
+            <p className="font-semibold text-coral-800">
               {d.syncErrors.length} calendar feed{d.syncErrors.length > 1 ? 's' : ''} failed to sync
             </p>
-            <ul className="mt-1 space-y-0.5 text-red-700">
+            <ul className="mt-1 space-y-0.5 text-coral-700">
               {d.syncErrors.map((f) => (
                 <li key={f.id}>
-                  <Link href={`/properties/${f.propertyId}`} className="underline">
-                    {f.property.name}
-                  </Link>{' '}
+                  <Link href={`/properties/${f.propertyId}`} className="underline">{f.property.name}</Link>{' '}
                   — {f.lastSyncError ?? 'Unknown error'}
                 </li>
               ))}
@@ -61,16 +48,22 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-3">
-        {/* Upcoming checkouts */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+        <StatTile icon={<Building2 className="h-5 w-5" />} tone="teal" label="Properties" value={d.propertyCount} href="/properties" />
+        <StatTile icon={<AlertTriangle className="h-5 w-5" />} tone="coral" label="Same-day" value={d.sameDayTurnovers.length} />
+        <StatTile icon={<Play className="h-5 w-5" />} tone="neutral" label="In progress" value={d.inProgress} />
+        <StatTile icon={<CircleCheck className="h-5 w-5" />} tone="green" label="Done today" value={d.completedToday} />
+      </div>
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-3">
         <section className="lg:col-span-2">
           <SectionTitle action={<Link href="/jobs" className="text-xs font-medium text-brand-700 hover:underline">View all</Link>}>
-            Upcoming checkouts (next 7 days)
+            Upcoming checkouts
           </SectionTitle>
           {d.upcomingCheckouts.length === 0 ? (
             <EmptyState
               title="No upcoming turnovers"
-              description="Connect a calendar to a property and reservations will appear here automatically."
+              description="Connect a calendar to a property and reservations appear here automatically."
               action={<LinkButton href="/properties" variant="secondary">Go to properties</LinkButton>}
             />
           ) : (
@@ -80,37 +73,11 @@ export default async function DashboardPage() {
               ))}
             </div>
           )}
-        </section>
 
-        {/* Right column */}
-        <div className="space-y-8">
-          <section>
-            <SectionTitle>Same-day turnovers</SectionTitle>
-            {d.sameDayTurnovers.length === 0 ? (
-              <Card className="text-sm text-navy-500">None scheduled. 🎉</Card>
-            ) : (
-              <div className="space-y-2">
-                {d.sameDayTurnovers.map((job) => (
-                  <Link key={job.id} href={`/jobs/${job.id}`} className="card block p-3 ring-1 ring-status-problem/30">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-medium text-navy-900">{job.property.name}</span>
-                      <SameDayBadge />
-                    </div>
-                    <p className="mt-1 text-xs text-navy-500">
-                      {formatInTz(job.checkoutDateTime, job.property.timezone)}
-                    </p>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section>
-            <SectionTitle>Needs a cleaner</SectionTitle>
-            {d.needingAssignment.length === 0 ? (
-              <Card className="text-sm text-navy-500">All properties have a cleaner assigned.</Card>
-            ) : (
-              <div className="space-y-2">
+          {d.needingAssignment.length > 0 && (
+            <div className="mt-6">
+              <SectionTitle>Needs a cleaner</SectionTitle>
+              <div className="grid gap-2 sm:grid-cols-2">
                 {d.needingAssignment.map((p) => (
                   <Link key={p.id} href={`/properties/${p.id}`} className="card flex items-center gap-3 p-3 hover:shadow-card-hover">
                     <Home className="h-4 w-4 text-navy-400" />
@@ -119,8 +86,39 @@ export default async function DashboardPage() {
                   </Link>
                 ))}
               </div>
-            )}
-          </section>
+            </div>
+          )}
+        </section>
+
+        <div className="space-y-6">
+          <Card>
+            <SectionTitle>Turnovers this week</SectionTitle>
+            <WeeklyChart data={d.weekly} />
+          </Card>
+
+          {d.sameDayTurnovers.length > 0 && (
+            <Card>
+              <SectionTitle>Same-day turnovers</SectionTitle>
+              <div className="space-y-2">
+                {d.sameDayTurnovers.map((job) => (
+                  <Link key={job.id} href={`/jobs/${job.id}`} className="block rounded-xl ring-1 ring-coral-500/30 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-sm font-medium text-navy-900">{job.property.name}</span>
+                      <SameDayBadge />
+                    </div>
+                    <p className="mt-1 text-xs text-navy-500">{formatInTz(job.checkoutDateTime, job.property.timezone)}</p>
+                  </Link>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          <Card>
+            <SectionTitle action={<Link href="/jobs" className="text-xs font-medium text-brand-700 hover:underline">View all</Link>}>
+              Recent activity
+            </SectionTitle>
+            <ActivityFeed items={d.activity} />
+          </Card>
         </div>
       </div>
     </div>

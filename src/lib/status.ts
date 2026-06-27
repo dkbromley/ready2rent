@@ -29,7 +29,7 @@ export const JOB_STATUS_META: Record<
   PROBLEM: {
     label: 'Problem',
     dot: 'bg-status-problem',
-    chip: 'bg-red-50 text-red-700 ring-red-600/20',
+    chip: 'bg-coral-50 text-coral-700 ring-coral-600/20',
   },
   CANCELED: {
     label: 'Canceled',

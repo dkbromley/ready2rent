@@ -42,13 +42,27 @@ const config: Config = {
           200: '#e8dcc4',
           300: '#d9c39d',
         },
+        // Coral — reserved for urgency: same-day turnovers, problems, alerts.
+        coral: {
+          50: '#fbeee9',
+          100: '#f6d2c4',
+          200: '#efb39d',
+          300: '#e68a68',
+          400: '#dd6a40',
+          500: '#cf5430',
+          600: '#b2421f',
+          700: '#8f3419',
+          800: '#6f2914',
+          900: '#4a1b0c',
+        },
         // Semantic status palette (job + reservation states)
         status: {
           available: '#15803d',
           scheduled: '#2563eb',
           progress: '#7c3aed',
           completed: '#0f766e',
-          problem: '#dc2626',
+          problem: '#cf5430',
+          sameday: '#cf5430',
           canceled: '#6b7280',
           pending: '#b45309',
         },

@@ -1,7 +1,59 @@
-import { JobStatus, ReservationStatus, SyncStatus, UserRole } from '@prisma/client';
-import { startOfDay, endOfDay, addDays, startOfToday } from 'date-fns';
+import { JobStatus, Prisma, ReservationStatus, SyncStatus, UserRole } from '@prisma/client';
+import {
+  startOfDay,
+  endOfDay,
+  addDays,
+  startOfToday,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  isSameDay,
+  format,
+} from 'date-fns';
 import { prisma } from '@/lib/prisma';
 import { getUserOrgIds, type SessionUser } from '@/lib/rbac';
+
+export interface ActivityItem {
+  id: string;
+  jobId: string;
+  toStatus: JobStatus;
+  note: string | null;
+  propertyName: string;
+  createdAt: Date;
+}
+
+/** Turnovers per day for the current week (Mon–Sun), server-local buckets. */
+async function weeklyTurnoverSeries(where: Prisma.TurnoverJobWhereInput) {
+  const start = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const end = endOfWeek(new Date(), { weekStartsOn: 1 });
+  const jobs = await prisma.turnoverJob.findMany({
+    where: { ...where, checkoutDateTime: { gte: start, lte: end } },
+    select: { checkoutDateTime: true },
+  });
+  return eachDayOfInterval({ start, end }).map((d) => ({
+    label: format(d, 'EEEEE'),
+    count: jobs.filter((j) => isSameDay(j.checkoutDateTime, d)).length,
+    isToday: isSameDay(d, new Date()),
+  }));
+}
+
+/** Most recent job status transitions in scope — the "did it happen?" feed. */
+async function recentActivity(jobWhere: Prisma.TurnoverJobWhereInput): Promise<ActivityItem[]> {
+  const hist = await prisma.jobStatusHistory.findMany({
+    where: { job: jobWhere },
+    include: { job: { select: { property: { select: { name: true } } } } },
+    orderBy: { createdAt: 'desc' },
+    take: 6,
+  });
+  return hist.map((h) => ({
+    id: h.id,
+    jobId: h.jobId,
+    toStatus: h.toStatus,
+    note: h.note,
+    propertyName: h.job.property.name,
+    createdAt: h.createdAt,
+  }));
+}
 
 /**
  * Read models for the dashboards. All queries are scoped by role:
@@ -88,6 +140,11 @@ export async function getOwnerDashboard(user: SessionUser) {
     prisma.property.count({ where: { id: { in: propertyIds } } }),
   ]);
 
+  const [weekly, activity] = await Promise.all([
+    weeklyTurnoverSeries({ propertyId: { in: propertyIds } }),
+    recentActivity({ propertyId: { in: propertyIds } }),
+  ]);
+
   return {
     upcomingCheckouts,
     sameDayTurnovers,
@@ -96,6 +153,8 @@ export async function getOwnerDashboard(user: SessionUser) {
     completedToday,
     syncErrors,
     propertyCount,
+    weekly,
+    activity,
   };
 }
 
@@ -148,7 +207,12 @@ export async function getCleanerDashboard(user: SessionUser) {
     }),
   ]);
 
-  return { todays, tomorrows, thisWeek, sameDay, problems };
+  const [weekly, activity] = await Promise.all([
+    weeklyTurnoverSeries(scope),
+    recentActivity(scope),
+  ]);
+
+  return { todays, tomorrows, thisWeek, sameDay, problems, weekly, activity };
 }
 
 /** Properties a cleaner manages or is assigned to (for the cleaner property list). */

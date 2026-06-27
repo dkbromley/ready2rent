@@ -34,8 +34,8 @@ export function PriorityBadge({ priority }: { priority: JobPriority }) {
 
 export function SameDayBadge() {
   return (
-    <Chip className="bg-red-50 text-red-700 ring-red-600/20">
-      <span className="h-1.5 w-1.5 rounded-full bg-status-problem" />
+    <Chip className="bg-coral-50 text-coral-700 ring-coral-600/20">
+      <span className="h-1.5 w-1.5 rounded-full bg-coral-500" />
       Same-day turnover
     </Chip>
   );

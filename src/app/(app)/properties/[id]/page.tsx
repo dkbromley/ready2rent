@@ -34,6 +34,7 @@ import { JobCard } from '@/components/JobCard';
 import { PropertyImageUpload } from '@/components/PropertyImageUpload';
 import { ReservationStatusBadge, SyncStatusBadge } from '@/components/StatusBadge';
 import { formatInTz } from '@/lib/datetime';
+import { formatTurnoverWindow } from '@/lib/status';
 
 export default async function PropertyDetailPage({
   params,
@@ -60,6 +61,19 @@ export default async function PropertyDetailPage({
     (r) => r.status === 'ACTIVE' || r.status === 'CHANGED',
   );
 
+  // Operational summary (turnoverJobs are ordered by checkout asc).
+  const now = Date.now();
+  const nextJob =
+    property.turnoverJobs.find(
+      (j) => j.status !== 'CANCELED' && j.status !== 'COMPLETED' && j.checkoutDateTime.getTime() >= now,
+    ) ?? null;
+  const openIssues = property.turnoverJobs.filter((j) => j.status === 'PROBLEM').length;
+  const cleanerName =
+    property.assignedCleanerUser?.name ||
+    property.assignedCleanerUser?.email ||
+    property.assignedCleanerOrganization?.name ||
+    null;
+
   return (
     <div>
       <Link href="/properties" className="mb-4 inline-flex items-center gap-1 text-sm text-navy-500 hover:text-navy-700">
@@ -83,36 +97,41 @@ export default async function PropertyDetailPage({
         <PropertyImageUpload propertyId={property.id} imageUrl={property.imageUrl} canManage />
       </div>
 
-      {/* Quick facts */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Card className="flex items-center gap-3">
-          <Bed className="h-5 w-5 text-navy-400" />
-          <div>
-            <p className="text-xs text-navy-400">Bedrooms</p>
-            <p className="font-semibold text-navy-900">{property.bedrooms}</p>
-          </div>
+      {/* Operational summary */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+        <Card className="p-4">
+          <p className="text-xs font-medium text-navy-400">Next checkout</p>
+          <p className="mt-1 text-sm font-semibold text-navy-900">
+            {nextJob ? formatInTz(nextJob.checkoutDateTime, tz, 'MMM d, h:mm a') : 'None scheduled'}
+          </p>
         </Card>
-        <Card className="flex items-center gap-3">
-          <Bath className="h-5 w-5 text-navy-400" />
-          <div>
-            <p className="text-xs text-navy-400">Bathrooms</p>
-            <p className="font-semibold text-navy-900">{property.bathrooms}</p>
-          </div>
+        <Card className="p-4">
+          <p className="text-xs font-medium text-navy-400">Turnover window</p>
+          <p className={`mt-1 text-sm font-semibold ${nextJob?.sameDayTurnover ? 'text-coral-600' : 'text-navy-900'}`}>
+            {nextJob ? formatTurnoverWindow(nextJob.turnoverWindowMinutes) : '—'}
+            {nextJob?.sameDayTurnover ? ' · same-day' : ''}
+          </p>
         </Card>
-        <Card className="flex items-center gap-3">
-          <LogOut className="h-5 w-5 text-status-problem" />
-          <div>
-            <p className="text-xs text-navy-400">Checkout</p>
-            <p className="font-semibold text-navy-900">{property.defaultCheckOutTime}</p>
-          </div>
+        <Card className="p-4">
+          <p className="text-xs font-medium text-navy-400">Cleaner</p>
+          <p className={`mt-1 text-sm font-semibold ${cleanerName ? 'text-navy-900' : 'text-amber-700'}`}>
+            {cleanerName ?? 'Unassigned'}
+          </p>
         </Card>
-        <Card className="flex items-center gap-3">
-          <LogIn className="h-5 w-5 text-status-available" />
-          <div>
-            <p className="text-xs text-navy-400">Check-in</p>
-            <p className="font-semibold text-navy-900">{property.defaultCheckInTime}</p>
-          </div>
+        <Card className="p-4">
+          <p className="text-xs font-medium text-navy-400">Open issues</p>
+          <p className={`mt-1 text-sm font-semibold ${openIssues > 0 ? 'text-coral-600' : 'text-status-completed'}`}>
+            {openIssues > 0 ? `${openIssues} open` : 'None'}
+          </p>
         </Card>
+      </div>
+
+      {/* Attributes */}
+      <div className="mt-3 flex flex-wrap gap-2 text-xs">
+        <span className="inline-flex items-center gap-1 rounded-full bg-navy-50 px-2.5 py-1 text-navy-600"><Bed className="h-3.5 w-3.5" /> {property.bedrooms} bd</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-navy-50 px-2.5 py-1 text-navy-600"><Bath className="h-3.5 w-3.5" /> {property.bathrooms} ba</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-navy-50 px-2.5 py-1 text-navy-600"><LogOut className="h-3.5 w-3.5 text-coral-500" /> out {property.defaultCheckOutTime}</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-navy-50 px-2.5 py-1 text-navy-600"><LogIn className="h-3.5 w-3.5 text-status-available" /> in {property.defaultCheckInTime}</span>
       </div>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-3">
