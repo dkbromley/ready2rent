@@ -4,7 +4,7 @@ import type { CalendarPlatform } from '@prisma/client';
  * Provider abstraction (Phase 6-ready).
  *
  * A ReservationProvider knows how to pull raw events from a source and normalize
- * them into TurnReady's canonical shape. iCal is the first implementation; direct
+ * them into Ready2Rent's canonical shape. iCal is the first implementation; direct
  * API providers (Airbnb/Vrbo/Guesty/Hostaway/OwnerRez/Hospitable/Lodgify) add
  * later by implementing this same interface — the sync service and job generator
  * never change.

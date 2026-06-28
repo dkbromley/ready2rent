@@ -16,7 +16,7 @@ export default function LandingPage() {
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <Link href="/" className="inline-flex items-center gap-2 text-lg font-bold text-navy-900">
           <Waves className="h-6 w-6 text-brand-600" />
-          TurnReady
+          Ready2Rent
         </Link>
         <nav className="flex items-center gap-2">
           <Link href="/login" className="rounded-xl px-4 py-2 text-sm font-medium text-navy-600 hover:bg-white/60">
@@ -37,7 +37,7 @@ export default function LandingPage() {
               Vacation rental turnovers, finally in sync.
             </h1>
             <p className="mt-5 text-lg text-navy-600">
-              TurnReady pulls your reservations straight from your booking calendars and turns
+              Ready2Rent pulls your reservations straight from your booking calendars and turns
               every checkout into a scheduled cleaning job — automatically. From checkout to clean,
               without the texts.
             </p>
@@ -99,7 +99,7 @@ export default function LandingPage() {
       <footer className="border-t border-navy-100 bg-white/50">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-6 py-6 text-sm text-navy-500 sm:flex-row">
           <span className="inline-flex items-center gap-2 font-medium text-navy-700">
-            <Waves className="h-4 w-4 text-brand-600" /> TurnReady
+            <Waves className="h-4 w-4 text-brand-600" /> Ready2Rent
           </span>
           <span>From checkout to clean — without the texts.</span>
         </div>

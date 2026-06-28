@@ -1,11 +1,11 @@
-# TurnReady — Architecture & Design
+# Ready2Rent — Architecture & Design
 
 This document covers the product architecture, data model, and the extension
 points that keep later phases from disturbing the Phase 1 core.
 
 ## 1. Product overview
 
-TurnReady is an **operations layer**, not a PMS and not a booking channel. It
+Ready2Rent is an **operations layer**, not a PMS and not a booking channel. It
 ingests reservations from the channels owners already use and turns them into
 **turnover work** for cleaners and (Phase 2) linen providers.
 

@@ -1,11 +1,11 @@
-# TurnReady
+# Ready2Rent
 
 **Vacation rental turnovers, finally in sync.**
 _From checkout to clean — without the texts._
 
-TurnReady sits between rental booking platforms (Airbnb, Vrbo) and the people who
+Ready2Rent sits between rental booking platforms (Airbnb, Vrbo) and the people who
 do the turnover work (cleaners, linen services). Owners connect their booking
-calendars via iCal; TurnReady pulls reservations on a schedule and converts every
+calendars via iCal; Ready2Rent pulls reservations on a schedule and converts every
 checkout into a scheduled cleaning job that cleaners see in real time.
 
 ---

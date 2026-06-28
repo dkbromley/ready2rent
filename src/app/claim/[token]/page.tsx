@@ -15,7 +15,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     <div className="coastal-gradient flex min-h-screen flex-col">
       <header className="px-6 py-5">
         <Link href="/" className="inline-flex items-center gap-2 font-bold text-navy-900">
-          <Waves className="h-6 w-6 text-brand-600" /> TurnReady
+          <Waves className="h-6 w-6 text-brand-600" /> Ready2Rent
         </Link>
       </header>
       <main className="flex flex-1 items-center justify-center px-4 py-8">

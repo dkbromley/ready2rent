@@ -48,7 +48,7 @@ export default async function PublicStatusPage({ params }: { params: Promise<{ t
     <div className="coastal-gradient min-h-screen">
       <header className="mx-auto flex max-w-2xl items-center gap-2 px-6 py-5">
         <Waves className="h-6 w-6 text-brand-600" />
-        <span className="font-bold text-navy-900">TurnReady</span>
+        <span className="font-bold text-navy-900">Ready2Rent</span>
       </header>
 
       <main className="mx-auto max-w-2xl px-6 pb-16">
@@ -128,7 +128,7 @@ export default async function PublicStatusPage({ params }: { params: Promise<{ t
           <p className="text-lg font-semibold">Want to manage turnovers yourself?</p>
           <p className="mt-1 text-sm text-navy-200">Track every checkout, assign cleaners, and connect all your listings in one place.</p>
           <Link href={ctaHref} className="mt-4 inline-flex rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-400">
-            {unclaimed ? 'Claim this property free' : 'Join TurnReady free'}
+            {unclaimed ? 'Claim this property free' : 'Join Ready2Rent free'}
           </Link>
         </div>
       </main>

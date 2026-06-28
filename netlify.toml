@@ -1,4 +1,4 @@
-# Netlify configuration for TurnReady (Next.js App Router).
+# Netlify configuration for Ready2Rent (Next.js App Router).
 # The official Next.js runtime handles SSR, server actions, API routes, and
 # image optimization on Netlify Functions.
 

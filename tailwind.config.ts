@@ -1,7 +1,7 @@
 import type { Config } from 'tailwindcss';
 
 /**
- * TurnReady design tokens.
+ * Ready2Rent design tokens.
  * Coastal-but-professional: deep navy chrome, teal/seafoam accent, sand neutrals,
  * and a clear semantic status palette used across job/reservation cards.
  */

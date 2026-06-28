@@ -10,7 +10,7 @@ import { prisma } from '@/lib/prisma';
  * wired up. Every attempt is recorded for audit/idempotency (mirrors SyncLog).
  *
  * To enable real sends: set RESEND_API_KEY and EMAIL_FROM (a verified sender,
- * e.g. "TurnReady <notify@yourdomain.com>") in env.
+ * e.g. "Ready2Rent <notify@yourdomain.com>") in env.
  */
 export interface SendEmailInput {
   to: string;

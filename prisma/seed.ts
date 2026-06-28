@@ -43,9 +43,9 @@ async function upsertUser(
 }
 
 async function main() {
-  console.log('Seeding TurnReady demo data…');
+  console.log('Seeding Ready2Rent demo data…');
 
-  await upsertUser('admin@turnready.app', 'Platform Admin', UserRole.ADMIN, 'TurnReady Admin', OrganizationType.ADMIN);
+  await upsertUser('admin@turnready.app', 'Platform Admin', UserRole.ADMIN, 'Ready2Rent Admin', OrganizationType.ADMIN);
   const { org: ownerOrg } = await upsertUser(
     'owner@turnready.app',
     'Olivia Owner',

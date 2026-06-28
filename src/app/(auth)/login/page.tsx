@@ -11,7 +11,7 @@ export default function LoginPage() {
   return (
     <Card className="p-7">
       <h1 className="text-xl font-bold text-navy-900">Welcome back</h1>
-      <p className="mt-1 text-sm text-navy-500">Sign in to your TurnReady account.</p>
+      <p className="mt-1 text-sm text-navy-500">Sign in to your Ready2Rent account.</p>
 
       <form action={formAction} className="mt-6 space-y-4">
         <Field label="Email">
@@ -35,7 +35,7 @@ export default function LoginPage() {
       </form>
 
       <p className="mt-6 text-center text-sm text-navy-500">
-        New to TurnReady?{' '}
+        New to Ready2Rent?{' '}
         <Link href="/signup" className="font-medium text-brand-700 hover:underline">
           Create an account
         </Link>

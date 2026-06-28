@@ -74,7 +74,7 @@ export function AppShell({
       <header className="sticky top-0 z-30 border-b border-navy-100 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <Link href="/dashboard" className="inline-flex items-center gap-2 font-bold text-navy-900">
-            <Waves className="h-5 w-5 text-brand-600" /> TurnReady
+            <Waves className="h-5 w-5 text-brand-600" /> Ready2Rent
           </Link>
           <div className="flex items-center gap-2">
             <Link href="/notifications" className="relative rounded-lg p-2 text-navy-600 hover:bg-navy-50">
