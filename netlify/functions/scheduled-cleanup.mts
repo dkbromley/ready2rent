@@ -6,7 +6,7 @@ import type { Config } from '@netlify/functions';
  * window and prunes their photos. Job rows are preserved, so analytics are safe.
  */
 export default async function handler() {
-  const base = process.env.URL || process.env.AUTH_URL || 'https://turnready.netlify.app';
+  const base = process.env.URL || process.env.AUTH_URL || 'https://ready2rent.netlify.app';
   const secret = process.env.CRON_SECRET;
   const res = await fetch(`${base}/api/cron/cleanup`, {
     method: 'POST',
