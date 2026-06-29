@@ -23,24 +23,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { JOB_STATUS_META, formatTurnoverWindow } from '@/lib/status';
 import type { JobStatus } from '@prisma/client';
 import { cn } from '@/lib/utils';
-
-// 8-color palette — assigned deterministically per propertyId
-const PALETTE = [
-  { bar: '#3b82f6', text: '#fff' }, // blue
-  { bar: '#8b5cf6', text: '#fff' }, // violet
-  { bar: '#10b981', text: '#fff' }, // emerald
-  { bar: '#f97316', text: '#fff' }, // orange
-  { bar: '#ec4899', text: '#fff' }, // pink
-  { bar: '#06b6d4', text: '#fff' }, // cyan
-  { bar: '#d97706', text: '#fff' }, // amber
-  { bar: '#ef4444', text: '#fff' }, // red
-] as const;
-
-function propertyColor(propertyId: string) {
-  let hash = 0;
-  for (const c of propertyId) hash = (hash * 31 + c.charCodeAt(0)) & 0xffff;
-  return PALETTE[hash % PALETTE.length];
-}
+import { resolvePropertyColor } from '@/lib/colors';
 
 export interface CalendarJob {
   id: string;
@@ -52,7 +35,19 @@ export interface CalendarJob {
   turnoverWindowMinutes: number | null;
   propertyName: string;
   propertyId: string;
+  calendarColor: string | null;
+  cleaningPrice: number | null;
   timezone: string;
+}
+
+/** Resolve the bar color for a job (explicit override or palette fallback). */
+function jobColor(job: { propertyId: string; calendarColor: string | null }) {
+  return { bar: resolvePropertyColor(job.propertyId, job.calendarColor), text: '#fff' };
+}
+
+/** "$120" or "" when no price set. */
+function priceLabel(price: number | null): string {
+  return price != null ? `$${price}` : '';
 }
 
 type ParsedJob = CalendarJob & { checkIn: Date | null; checkout: Date };
@@ -277,18 +272,19 @@ function MonthWeekRow({
 
       {/* Rows 2+: one bar per overlapping reservation */}
       {bars.map(({ job, colStart, colSpan, startsInWeek, endsInWeek, stayStart }, idx) => {
-        const color = propertyColor(job.propertyId);
+        const color = jobColor(job);
+        const price = priceLabel(job.cleaningPrice);
         const rounding = [
-          startsInWeek ? '4px' : '0',
-          endsInWeek ? '4px' : '0',
-          endsInWeek ? '4px' : '0',
-          startsInWeek ? '4px' : '0',
+          startsInWeek ? '6px' : '0',
+          endsInWeek ? '6px' : '0',
+          endsInWeek ? '6px' : '0',
+          startsInWeek ? '6px' : '0',
         ].join(' ');
         return (
           <button
             key={job.id}
             onClick={() => onOpen(job.id)}
-            title={`${job.propertyName} · Check-in ${format(stayStart, 'MMM d h:mm a')} → Checkout ${format(job.checkout, 'MMM d h:mm a')}`}
+            title={`${job.propertyName}${price ? ` · ${price}` : ''} · Check-in ${format(stayStart, 'MMM d h:mm a')} → Checkout ${format(job.checkout, 'MMM d h:mm a')}`}
             style={{
               gridColumn: `${colStart} / span ${colSpan}`,
               gridRow: idx + 2,
@@ -299,25 +295,17 @@ function MonthWeekRow({
               marginRight: endsInWeek ? '3px' : '0',
             }}
             className={cn(
-              'mb-1 truncate px-1.5 py-0.5 text-left text-[11px] font-medium leading-4',
-              job.sameDayTurnover && 'ring-1 ring-inset ring-white/40',
+              'mb-1 flex items-center gap-1 truncate px-2 py-1 text-left text-xs font-medium leading-5',
+              job.sameDayTurnover && 'ring-1 ring-inset ring-white/50',
             )}
           >
-            {startsInWeek ? (
-              <>
-                <span className="opacity-75">{format(stayStart, 'h:mma')} </span>
-                <span>{job.propertyName}</span>
-                {endsInWeek && (
-                  <span className="opacity-75"> → {format(job.checkout, 'h:mma')}</span>
-                )}
-              </>
-            ) : (
-              <>
-                <span>{job.propertyName}</span>
-                {endsInWeek && (
-                  <span className="opacity-75"> → {format(job.checkout, 'h:mma')}</span>
-                )}
-              </>
+            {startsInWeek && (
+              <span className="shrink-0 opacity-80">{format(stayStart, 'h:mma')}</span>
+            )}
+            <span className="truncate">{job.propertyName}</span>
+            {price && <span className="ml-auto shrink-0 font-semibold">{price}</span>}
+            {endsInWeek && !price && (
+              <span className="ml-auto shrink-0 opacity-80">→ {format(job.checkout, 'h:mma')}</span>
             )}
           </button>
         );
@@ -392,19 +380,20 @@ function WeekView({
 
             const safeStart = Math.max(0, startColIdx);
             const safeEnd = Math.max(safeStart, endColIdx < 0 ? 6 : endColIdx);
-            const color = propertyColor(job.propertyId);
+            const color = jobColor(job);
+            const price = priceLabel(job.cleaningPrice);
             const rounding = [
-              startsInWeek ? '6px' : '0',
-              endsInWeek ? '6px' : '0',
-              endsInWeek ? '6px' : '0',
-              startsInWeek ? '6px' : '0',
+              startsInWeek ? '8px' : '0',
+              endsInWeek ? '8px' : '0',
+              endsInWeek ? '8px' : '0',
+              startsInWeek ? '8px' : '0',
             ].join(' ');
 
             return (
               <button
                 key={job.id}
                 onClick={() => onOpen(job.id)}
-                title={`${job.propertyName} · ${format(stayStart, 'h:mm a')} → ${format(job.checkout, 'h:mm a')}`}
+                title={`${job.propertyName}${price ? ` · ${price}` : ''} · ${format(stayStart, 'h:mm a')} → ${format(job.checkout, 'h:mm a')}`}
                 style={{
                   gridColumn: `${safeStart + 1} / span ${safeEnd - safeStart + 1}`,
                   gridRow: idx + 1,
@@ -414,15 +403,13 @@ function WeekView({
                   marginLeft: startsInWeek ? '2px' : '0',
                   marginRight: endsInWeek ? '2px' : '0',
                 }}
-                className="mb-1.5 truncate px-2 py-1 text-left text-xs font-medium leading-4"
+                className="mb-1.5 flex items-center gap-1 truncate px-2.5 py-1.5 text-left text-xs font-medium leading-5"
               >
-                <span className="font-semibold">{job.propertyName}</span>
+                <span className="truncate font-semibold">{job.propertyName}</span>
                 {startsInWeek && (
-                  <span className="ml-1 opacity-80">
-                    {format(stayStart, 'h:mma')}
-                    {endsInWeek && ` → ${format(job.checkout, 'h:mma')}`}
-                  </span>
+                  <span className="shrink-0 opacity-80">{format(stayStart, 'h:mma')}</span>
                 )}
+                {price && <span className="ml-auto shrink-0 font-semibold">{price}</span>}
               </button>
             );
           })}
@@ -455,7 +442,8 @@ function DayView({
     <div className="space-y-2">
       {jobs.map((j) => {
         const meta = JOB_STATUS_META[j.status];
-        const color = propertyColor(j.propertyId);
+        const color = jobColor(j);
+        const price = priceLabel(j.cleaningPrice);
         const stayStart = j.checkIn ?? j.checkout;
         return (
           <button
@@ -480,11 +468,14 @@ function DayView({
                   )}
                 </p>
               </div>
-              <span
-                className={cn('shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset', meta.chip)}
-              >
-                {meta.label}
-              </span>
+              <div className="flex shrink-0 items-center gap-2">
+                {price && <span className="text-sm font-semibold text-navy-900">{price}</span>}
+                <span
+                  className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset', meta.chip)}
+                >
+                  {meta.label}
+                </span>
+              </div>
             </div>
           </button>
         );

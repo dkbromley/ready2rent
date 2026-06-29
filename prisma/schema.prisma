@@ -209,6 +209,12 @@ model Property {
   notes                String?
   /// Optional hero image for the property (Supabase Storage public URL).
   imageUrl             String?
+  /// Hex color (e.g. "#3b82f6") used for this property's bars on the calendar.
+  /// Null = fall back to a deterministic palette color.
+  calendarColor        String?
+  /// Default price (whole dollars) paid for one turnover clean of this property.
+  /// Surfaced on the calendar and job cards. Null = no price set.
+  cleaningPrice        Int?
   active               Boolean  @default(true)
   /// Owner-led vs cleaner-led onboarding (see ManagementMode).
   managementMode       ManagementMode @default(OWNER_MANAGED)
