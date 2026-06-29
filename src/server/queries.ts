@@ -67,8 +67,8 @@ async function recentActivity(jobWhere: Prisma.TurnoverJobWhereInput): Promise<A
 
 /** Property-where scope for the owner/admin (relation filter, one round trip). */
 export function ownerPropertyScope(user: SessionUser): Prisma.PropertyWhereInput {
-  if (user.role === UserRole.ADMIN) return {};
-  return { ownerOrganization: { members: { some: { userId: user.id } } } };
+  if (user.role === UserRole.ADMIN) return { active: true };
+  return { active: true, ownerOrganization: { members: { some: { userId: user.id } } } };
 }
 
 export async function getOwnerScopePropertyIds(user: SessionUser): Promise<string[]> {
