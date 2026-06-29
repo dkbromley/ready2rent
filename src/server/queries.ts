@@ -67,8 +67,8 @@ async function recentActivity(jobWhere: Prisma.TurnoverJobWhereInput): Promise<A
 
 /** Property-where scope for the owner/admin (relation filter, one round trip). */
 export function ownerPropertyScope(user: SessionUser): Prisma.PropertyWhereInput {
-  if (user.role === UserRole.ADMIN) return {};
-  return { ownerOrganization: { members: { some: { userId: user.id } } } };
+  if (user.role === UserRole.ADMIN) return { active: true };
+  return { active: true, ownerOrganization: { members: { some: { userId: user.id } } } };
 }
 
 export async function getOwnerScopePropertyIds(user: SessionUser): Promise<string[]> {
@@ -229,18 +229,28 @@ export async function listCleanerProperties(user: SessionUser) {
 export async function getCleanerCalendarJobs(user: SessionUser) {
   const scope = await getCleanerJobScope(user);
   const jobs = await prisma.turnoverJob.findMany({
-    where: { ...scope, status: { not: JobStatus.CANCELED }, archivedAt: null },
-    include: { property: { select: { name: true, city: true, state: true, timezone: true } } },
+    where: {
+      ...scope,
+      status: { not: JobStatus.CANCELED },
+      archivedAt: null,
+      property: { active: true },
+    },
+    include: {
+      property: { select: { id: true, name: true, city: true, state: true, timezone: true } },
+      reservation: { select: { checkInDate: true } },
+    },
     orderBy: { checkoutDateTime: 'asc' },
   });
   return jobs.map((j) => ({
     id: j.id,
     status: j.status,
     sameDayTurnover: j.sameDayTurnover,
+    checkInISO: j.reservation?.checkInDate?.toISOString() ?? null,
     checkoutISO: j.checkoutDateTime.toISOString(),
     nextCheckInISO: j.nextCheckInDateTime ? j.nextCheckInDateTime.toISOString() : null,
     turnoverWindowMinutes: j.turnoverWindowMinutes,
     propertyName: j.property.name,
+    propertyId: j.property.id,
     timezone: j.property.timezone,
   }));
 }

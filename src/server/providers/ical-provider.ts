@@ -64,15 +64,18 @@ export class ICalReservationProvider implements ReservationProvider {
     const isBlocked = /not available|unavailable|blocked/i.test(summary);
     if (isBlocked) return null;
 
+    const isAllDay = (event as unknown as Record<string, unknown>).datetype === 'date';
     const checkInDate = resolveLocalDateTime(
       start,
       property.defaultCheckInTime,
       property.timezone,
+      isAllDay,
     );
     const checkOutDate = resolveLocalDateTime(
       end,
       property.defaultCheckOutTime,
       property.timezone,
+      isAllDay,
     );
 
     const uid = (event.uid ?? '').toString().trim();

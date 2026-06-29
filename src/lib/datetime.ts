@@ -21,18 +21,31 @@ export function parseTimeOfDay(value: string): [number, number] {
 /**
  * Given a date (any instant on the target calendar day) and a wall-clock time
  * in a timezone, return the absolute UTC instant for that local wall time.
+ *
+ * Pass isAllDay=true for iCal VALUE=DATE events: node-ical encodes those as UTC
+ * midnight, so we must read the date components from UTC directly — calling
+ * toZonedTime() would shift the date backward for any timezone behind UTC.
  */
 export function resolveLocalDateTime(
   day: Date,
   timeOfDay: string,
   timezone: string,
+  isAllDay = false,
 ): Date {
-  // Work out the calendar Y/M/D *in the property's timezone*.
-  const zoned = toZonedTime(day, timezone);
   const [h, min] = parseTimeOfDay(timeOfDay);
-  const y = zoned.getFullYear();
-  const mo = String(zoned.getMonth() + 1).padStart(2, '0');
-  const d = String(zoned.getDate()).padStart(2, '0');
+  let y: number, mo: string, d: string;
+  if (isAllDay) {
+    // node-ical stores VALUE=DATE as UTC midnight; read components from UTC.
+    y = day.getUTCFullYear();
+    mo = String(day.getUTCMonth() + 1).padStart(2, '0');
+    d = String(day.getUTCDate()).padStart(2, '0');
+  } else {
+    // Work out the calendar Y/M/D *in the property's timezone*.
+    const zoned = toZonedTime(day, timezone);
+    y = zoned.getFullYear();
+    mo = String(zoned.getMonth() + 1).padStart(2, '0');
+    d = String(zoned.getDate()).padStart(2, '0');
+  }
   const hh = String(h).padStart(2, '0');
   const mm = String(min).padStart(2, '0');
   // Interpret "YYYY-MM-DDTHH:mm:ss" as wall time in `timezone`, get UTC instant.

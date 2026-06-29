@@ -408,9 +408,18 @@ export async function createCleanerProperty(formData: FormData) {
 export async function removeProperty(propertyId: string) {
   const user = await requireUser();
   if (!(await canAccessProperty(user, propertyId))) throw new Error('Not authorized.');
-  // Soft-remove: deactivate the property + its feeds; preserve all history.
+  // Soft-remove: deactivate property + feeds; cancel any open jobs so they stop
+  // appearing in cleaner dashboards. Completed jobs are preserved for history.
   await prisma.property.update({ where: { id: propertyId }, data: { active: false } });
   await prisma.calendarFeed.updateMany({ where: { propertyId }, data: { active: false } });
+  await prisma.turnoverJob.updateMany({
+    where: {
+      propertyId,
+      status: { notIn: [JobStatus.COMPLETED, JobStatus.CANCELED] },
+    },
+    data: { status: JobStatus.CANCELED },
+  });
   revalidatePath('/cleaner/properties');
   revalidatePath('/cleaner');
+  revalidatePath('/properties');
 }
