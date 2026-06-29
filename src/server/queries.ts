@@ -236,7 +236,17 @@ export async function getCleanerCalendarJobs(user: SessionUser) {
       property: { active: true },
     },
     include: {
-      property: { select: { id: true, name: true, city: true, state: true, timezone: true } },
+      property: {
+        select: {
+          id: true,
+          name: true,
+          city: true,
+          state: true,
+          timezone: true,
+          calendarColor: true,
+          cleaningPrice: true,
+        },
+      },
       reservation: { select: { checkInDate: true } },
     },
     orderBy: { checkoutDateTime: 'asc' },
@@ -251,6 +261,8 @@ export async function getCleanerCalendarJobs(user: SessionUser) {
     turnoverWindowMinutes: j.turnoverWindowMinutes,
     propertyName: j.property.name,
     propertyId: j.property.id,
+    calendarColor: j.property.calendarColor,
+    cleaningPrice: j.property.cleaningPrice,
     timezone: j.property.timezone,
   }));
 }

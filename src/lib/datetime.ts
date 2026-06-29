@@ -18,6 +18,14 @@ export function parseTimeOfDay(value: string): [number, number] {
   return [h, min];
 }
 
+/** Format a wall-clock "HH:mm" string as 12-hour with meridiem, e.g. "4:00 PM". */
+export function formatTimeOfDay12(value: string): string {
+  const [h, min] = parseTimeOfDay(value);
+  const meridiem = h < 12 ? 'AM' : 'PM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(min).padStart(2, '0')} ${meridiem}`;
+}
+
 /**
  * Given a date (any instant on the target calendar day) and a wall-clock time
  * in a timezone, return the absolute UTC instant for that local wall time.

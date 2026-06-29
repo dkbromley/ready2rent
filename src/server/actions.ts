@@ -37,6 +37,14 @@ const propertySchema = z.object({
   timezone: z.string().min(1).default('America/New_York'),
   defaultCheckInTime: z.string().regex(/^\d{1,2}:\d{2}$/).default('16:00'),
   defaultCheckOutTime: z.string().regex(/^\d{1,2}:\d{2}$/).default('10:00'),
+  calendarColor: z.preprocess(
+    (v) => (v === '' || v == null ? undefined : v),
+    z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Pick a valid color').optional(),
+  ),
+  cleaningPrice: z.preprocess(
+    (v) => (v === '' || v == null ? undefined : v),
+    z.coerce.number().int().min(0).max(100000).optional(),
+  ),
   notes: z.string().max(2000).optional(),
 });
 
@@ -62,6 +70,32 @@ export async function createProperty(formData: FormData) {
 
   revalidatePath('/properties');
   redirect(`/properties/${property.id}`);
+}
+
+export async function updateProperty(propertyId: string, formData: FormData) {
+  const user = await requireUser();
+  if (!(await canAccessProperty(user, propertyId))) throw new Error('Not authorized.');
+  const parsed = propertySchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    throw new Error(parsed.error.errors[0]?.message ?? 'Invalid property');
+  }
+
+  // Coalesce optional fields to explicit null so clearing them persists (Prisma
+  // omits undefined). calendarColor/cleaningPrice are nullable on the model.
+  const { calendarColor, cleaningPrice, ...rest } = parsed.data;
+  await prisma.property.update({
+    where: { id: propertyId },
+    data: {
+      ...rest,
+      calendarColor: calendarColor ?? null,
+      cleaningPrice: cleaningPrice ?? null,
+    },
+  });
+
+  revalidatePath('/properties');
+  revalidatePath(`/properties/${propertyId}`);
+  revalidatePath('/cleaner/calendar');
+  redirect(`/properties/${propertyId}`);
 }
 
 /** Reads an optional `image` File from a property form and stores it. No-op when absent/invalid. */

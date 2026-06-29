@@ -10,6 +10,8 @@ import {
   Bed,
   Bath,
   CalendarClock,
+  Pencil,
+  DollarSign,
 } from 'lucide-react';
 import { CalendarPlatform, UserRole } from '@prisma/client';
 import { requireUser, canAccessProperty } from '@/lib/rbac';
@@ -33,7 +35,7 @@ import { JobCard } from '@/components/JobCard';
 import { PropertyImageUpload } from '@/components/PropertyImageUpload';
 import { SubmitButton } from '@/components/SubmitButton';
 import { ReservationStatusBadge, SyncStatusBadge } from '@/components/StatusBadge';
-import { formatInTz } from '@/lib/datetime';
+import { formatInTz, formatTimeOfDay12 } from '@/lib/datetime';
 import { formatTurnoverWindow } from '@/lib/status';
 
 export default async function PropertyDetailPage({
@@ -84,11 +86,19 @@ export default async function PropertyDetailPage({
         title={property.name}
         subtitle={[property.address, property.city, property.state, property.zip].filter(Boolean).join(', ') || undefined}
         action={
-          <form action={triggerPropertySync.bind(null, property.id)}>
-            <SubmitButton variant="secondary" pendingText="Syncing…">
-              <RefreshCw className="h-4 w-4" /> Sync now
-            </SubmitButton>
-          </form>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/properties/${property.id}/edit`}
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-navy-700 ring-1 ring-inset ring-navy-200 hover:bg-navy-50"
+            >
+              <Pencil className="h-4 w-4" /> Edit
+            </Link>
+            <form action={triggerPropertySync.bind(null, property.id)}>
+              <SubmitButton variant="secondary" pendingText="Syncing…">
+                <RefreshCw className="h-4 w-4" /> Sync now
+              </SubmitButton>
+            </form>
+          </div>
         }
       />
 
@@ -130,8 +140,11 @@ export default async function PropertyDetailPage({
       <div className="mt-3 flex flex-wrap gap-2 text-xs">
         <span className="inline-flex items-center gap-1 rounded-full bg-navy-50 px-2.5 py-1 text-navy-600"><Bed className="h-3.5 w-3.5" /> {property.bedrooms} bd</span>
         <span className="inline-flex items-center gap-1 rounded-full bg-navy-50 px-2.5 py-1 text-navy-600"><Bath className="h-3.5 w-3.5" /> {property.bathrooms} ba</span>
-        <span className="inline-flex items-center gap-1 rounded-full bg-navy-50 px-2.5 py-1 text-navy-600"><LogOut className="h-3.5 w-3.5 text-coral-500" /> out {property.defaultCheckOutTime}</span>
-        <span className="inline-flex items-center gap-1 rounded-full bg-navy-50 px-2.5 py-1 text-navy-600"><LogIn className="h-3.5 w-3.5 text-status-available" /> in {property.defaultCheckInTime}</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-navy-50 px-2.5 py-1 text-navy-600"><LogOut className="h-3.5 w-3.5 text-coral-500" /> out {formatTimeOfDay12(property.defaultCheckOutTime)}</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-navy-50 px-2.5 py-1 text-navy-600"><LogIn className="h-3.5 w-3.5 text-status-available" /> in {formatTimeOfDay12(property.defaultCheckInTime)}</span>
+        {property.cleaningPrice != null && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-navy-50 px-2.5 py-1 text-navy-600"><DollarSign className="h-3.5 w-3.5 text-status-completed" /> {property.cleaningPrice}/clean</span>
+        )}
       </div>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-3">

@@ -42,6 +42,13 @@ export default async function NewPropertyPage() {
             </Field>
           </div>
 
+          <Field label="Price per clean (USD, optional)" hint="Shown on the calendar and job cards.">
+            <div className="flex items-center">
+              <span className="rounded-l-xl border border-r-0 border-navy-200 bg-navy-50 px-3 py-2 text-sm text-navy-500">$</span>
+              <input name="cleaningPrice" type="number" min={0} step={1} placeholder="120" className={`${inputClass} rounded-l-none`} />
+            </div>
+          </Field>
+
           <Field label="Timezone" hint="Used to resolve checkout/check-in times.">
             <select name="timezone" defaultValue="America/New_York" className={inputClass}>
               {COMMON_TIMEZONES.map((tz) => (
