@@ -12,6 +12,7 @@ import {
   CalendarClock,
   Pencil,
   DollarSign,
+  Mail,
 } from 'lucide-react';
 import { CalendarPlatform, UserRole } from '@prisma/client';
 import { requireUser, canAccessProperty } from '@/lib/rbac';
@@ -21,6 +22,8 @@ import {
   assignCleaner,
   removeCalendarFeed,
   triggerPropertySync,
+  createInvitation,
+  revokeInvitation,
 } from '@/server/actions';
 import {
   PageHeader,
@@ -309,6 +312,57 @@ export default async function PropertyDetailPage({
             </Card>
           </section>
           )}
+
+          {/* Invitations — host invites a cleaner; cleaner invites the host */}
+          <section>
+            <SectionTitle>
+              {user.role === UserRole.CLEANER ? 'Invite the host' : 'Invite a cleaner'}
+            </SectionTitle>
+            <Card>
+              <p className="mb-3 text-sm text-navy-500">
+                {user.role === UserRole.CLEANER
+                  ? "Send the host an invite to join Ready2Rent and follow this property's turnovers."
+                  : 'Invite a cleaner by email to connect their account to this property.'}
+              </p>
+              <form action={createInvitation} className="space-y-3">
+                <input type="hidden" name="propertyId" value={property.id} />
+                <input
+                  type="hidden"
+                  name="invitedRole"
+                  value={user.role === UserRole.CLEANER ? 'OWNER' : 'CLEANER'}
+                />
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  placeholder={user.role === UserRole.CLEANER ? 'host@example.com' : 'cleaner@example.com'}
+                  className={inputClass}
+                />
+                <SubmitButton variant="secondary" className="w-full" pendingText="Sending…">
+                  <Mail className="h-4 w-4" /> Send invite
+                </SubmitButton>
+              </form>
+
+              {property.invitations.length > 0 && (
+                <div className="mt-4 space-y-2 border-t border-navy-100 pt-3">
+                  <p className="text-xs font-medium text-navy-400">Pending invites</p>
+                  {property.invitations.map((inv) => (
+                    <div key={inv.id} className="flex items-center justify-between gap-2 text-sm">
+                      <span className="truncate text-navy-700">
+                        {inv.email}
+                        <span className="ml-1 text-xs text-navy-400">
+                          ({inv.invitedRole === UserRole.CLEANER ? 'cleaner' : 'host'})
+                        </span>
+                      </span>
+                      <form action={revokeInvitation.bind(null, inv.id)}>
+                        <button className="text-xs text-navy-400 hover:text-status-problem">Revoke</button>
+                      </form>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </section>
 
           {/* Notes */}
           {property.notes && (

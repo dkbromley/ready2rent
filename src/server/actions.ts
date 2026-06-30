@@ -18,6 +18,7 @@ import { syncFeed, syncAllActiveFeeds } from '@/server/sync/sync-service';
 import { regeneratePropertyJobs } from '@/server/sync/job-generator';
 import { notify } from '@/server/notifications';
 import { notifyOwnerOfJob } from '@/server/owner-notify';
+import { applyInvitationAcceptance, sendInvitationEmail } from '@/server/invitations';
 import { detectPlatformFromUrl } from '@/lib/feeds';
 import { storePropertyImage, deleteStoredFile } from '@/lib/storage';
 import { MAX_IMAGE_BYTES, ALLOWED_IMAGE_TYPES } from '@/lib/limits';
@@ -210,6 +211,86 @@ export async function assignCleaner(formData: FormData) {
   }
 
   revalidatePath(`/properties/${propertyId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Invitations (host <-> cleaner)
+// ---------------------------------------------------------------------------
+
+const inviteSchema = z.object({
+  email: z.string().email('Enter a valid email'),
+  invitedRole: z.enum(['OWNER', 'CLEANER']),
+  propertyId: z.string().optional(),
+});
+
+/** Invite a cleaner (or host) by email, optionally linking them to a property. */
+export async function createInvitation(formData: FormData) {
+  const user = await requireUser();
+  const parsed = inviteSchema.safeParse({
+    email: formData.get('email'),
+    invitedRole: formData.get('invitedRole'),
+    propertyId: formData.get('propertyId') || undefined,
+  });
+  if (!parsed.success) throw new Error(parsed.error.errors[0]?.message ?? 'Invalid invitation');
+  const { email, invitedRole, propertyId } = parsed.data;
+
+  if (propertyId && !(await canAccessProperty(user, propertyId))) {
+    throw new Error('Not authorized.');
+  }
+
+  // Record-keeping: tie the invite to the inviter's first org.
+  const membership = await prisma.organizationMember.findFirst({
+    where: { userId: user.id },
+    select: { organizationId: true },
+  });
+
+  // Avoid stacking duplicate pending invites for the same email+property.
+  const dupe = await prisma.invitation.findFirst({
+    where: { email: email.toLowerCase(), propertyId: propertyId ?? null, status: 'PENDING' },
+  });
+  if (dupe) {
+    await sendInvitationEmail(dupe.id);
+  } else {
+    const invitation = await prisma.invitation.create({
+      data: {
+        email: email.toLowerCase(),
+        invitedRole: invitedRole as UserRole,
+        invitedByUserId: user.id,
+        organizationId: membership?.organizationId ?? null,
+        propertyId: propertyId ?? null,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      },
+    });
+    await sendInvitationEmail(invitation.id);
+  }
+
+  if (propertyId) revalidatePath(`/properties/${propertyId}`);
+}
+
+export async function revokeInvitation(invitationId: string) {
+  const user = await requireUser();
+  const inv = await prisma.invitation.findUnique({ where: { id: invitationId } });
+  if (!inv) return;
+  // Only the inviter (or someone who can access the linked property) may revoke.
+  const allowed =
+    inv.invitedByUserId === user.id ||
+    (inv.propertyId ? await canAccessProperty(user, inv.propertyId) : false);
+  if (!allowed) throw new Error('Not authorized.');
+  await prisma.invitation.update({ where: { id: invitationId }, data: { status: 'REVOKED' } });
+  if (inv.propertyId) revalidatePath(`/properties/${inv.propertyId}`);
+}
+
+/** Accept an invitation as the currently signed-in user. */
+export async function acceptInvitation(token: string) {
+  const user = await requireUser();
+  const result = await applyInvitationAcceptance(token, user.id);
+  if (!result.ok) throw new Error(result.error ?? 'Could not accept invitation.');
+  revalidatePath('/dashboard');
+  if (result.propertyId) {
+    revalidatePath(`/properties/${result.propertyId}`);
+    redirect(`/properties/${result.propertyId}`);
+  }
+  redirect('/dashboard');
 }
 
 // ---------------------------------------------------------------------------

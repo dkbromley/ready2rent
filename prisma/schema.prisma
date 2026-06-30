@@ -153,8 +153,47 @@ model User {
   assignedProperties     Property[]              @relation("PropertyCleanerUser")
   createdProperties      Property[]              @relation("PropertyCreatedBy")
   serviceProviderProfile ServiceProviderProfile?
+  invitesSent            Invitation[]            @relation("InvitesSent")
+  invitesAccepted        Invitation[]            @relation("InvitesAccepted")
 
   @@index([role])
+}
+
+/// Connects hosts and cleaners. A host can invite a cleaner (or vice versa) by
+/// email; accepting links the invitee to the property/org. Off-platform hosts
+/// also have the lighter-weight PropertyOwnerContact claim flow; this is the
+/// account-to-account version.
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+}
+
+model Invitation {
+  id               String       @id @default(cuid())
+  token            String       @unique @default(cuid())
+  email            String
+  /// Role the invitee will act as for this connection (OWNER = host, CLEANER).
+  invitedRole      UserRole
+  status           InviteStatus @default(PENDING)
+  invitedByUserId  String
+  /// Inviter's organization the invitee is linked to on accept.
+  organizationId   String?
+  /// Optional property to assign (cleaner) or grant host access to on accept.
+  propertyId       String?
+  acceptedByUserId String?
+  acceptedAt       DateTime?
+  createdAt        DateTime     @default(now())
+  expiresAt        DateTime?
+
+  invitedBy    User          @relation("InvitesSent", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+  acceptedBy   User?         @relation("InvitesAccepted", fields: [acceptedByUserId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  property     Property?     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([status])
+  @@index([propertyId])
 }
 
 /// Per-user in-app notification opt-outs. A missing row = everything on (the
@@ -187,6 +226,7 @@ model Organization {
   linenForProperties     Property[]              @relation("PropertyLinenOrg")
   assignedJobs           TurnoverJob[]           @relation("JobAssignedOrg")
   serviceProviderProfile ServiceProviderProfile?
+  invitations            Invitation[]
 
   @@index([type])
 }
@@ -263,6 +303,7 @@ model Property {
   ownerContact  PropertyOwnerContact?
   messageLogs   MessageLog[]
   checklistItems PropertyChecklistItem[]
+  invitations   Invitation[]
 
   @@index([ownerOrganizationId])
   @@index([assignedCleanerOrganizationId])
