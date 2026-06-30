@@ -54,9 +54,9 @@ npm run dev              # http://localhost:3000
 
 | Role | Email |
 |---|---|
-| Owner | `owner@turnready.app` |
-| Cleaner | `cleaner@turnready.app` |
-| Admin | `admin@turnready.app` |
+| Owner | `owner@ready2rent.io` |
+| Cleaner | `cleaner@ready2rent.io` |
+| Admin | `admin@ready2rent.io` |
 
 ### Recurring sync
 
