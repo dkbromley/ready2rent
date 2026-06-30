@@ -33,6 +33,7 @@ import {
 } from '@/components/ui';
 import { JobCard } from '@/components/JobCard';
 import { PropertyImageUpload } from '@/components/PropertyImageUpload';
+import { ChecklistEditor } from '@/components/ChecklistEditor';
 import { SubmitButton } from '@/components/SubmitButton';
 import { ReservationStatusBadge, SyncStatusBadge } from '@/components/StatusBadge';
 import { formatInTz, formatTimeOfDay12 } from '@/lib/datetime';
@@ -200,6 +201,37 @@ export default async function PropertyDetailPage({
                     ))}
                   </tbody>
                 </table>
+              </Card>
+            )}
+          </section>
+
+          {/* Cleaning checklist (host-authored; cleaners tick it off per job) */}
+          <section>
+            <SectionTitle>Cleaning checklist</SectionTitle>
+            {user.role === UserRole.CLEANER ? (
+              property.checklistItems.length === 0 ? (
+                <Card className="text-sm text-navy-500">The host hasn&apos;t added a checklist yet.</Card>
+              ) : (
+                <Card>
+                  <ol className="space-y-2">
+                    {property.checklistItems.map((item, i) => (
+                      <li key={item.id} className="flex gap-2 text-sm text-navy-700">
+                        <span className="text-xs font-semibold text-navy-400">{i + 1}.</span>
+                        {item.text}
+                      </li>
+                    ))}
+                  </ol>
+                </Card>
+              )
+            ) : (
+              <Card>
+                <p className="mb-3 text-sm text-navy-500">
+                  Define exactly how this property should be turned over. Cleaners tick these off on each job.
+                </p>
+                <ChecklistEditor
+                  propertyId={property.id}
+                  items={property.checklistItems.map((i) => ({ id: i.id, text: i.text }))}
+                />
               </Card>
             )}
           </section>

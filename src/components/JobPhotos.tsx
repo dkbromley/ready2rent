@@ -21,10 +21,12 @@ export function JobPhotos({
   jobId,
   photos,
   canManage,
+  kind = 'COMPLETION',
 }: {
   jobId: string;
   photos: JobPhotoItem[];
   canManage: boolean;
+  kind?: 'COMPLETION' | 'PROBLEM';
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -43,6 +45,7 @@ export function JobPhotos({
     try {
       const fd = new FormData();
       fd.append('photo', file);
+      fd.append('kind', kind);
       const res = await fetch(`/api/jobs/${jobId}/photos`, { method: 'POST', body: fd });
       if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error ?? 'Upload failed');
       router.refresh();

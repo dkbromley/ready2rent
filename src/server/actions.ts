@@ -286,6 +286,132 @@ export async function saveJobNotes(formData: FormData) {
 }
 
 // ---------------------------------------------------------------------------
+// Property checklists (host-authored, cleaner-completed)
+// ---------------------------------------------------------------------------
+
+const checklistTextSchema = z.string().trim().min(1, 'Add some text').max(280);
+
+/** Host adds a checklist line to a property. New items go to the bottom. */
+export async function addChecklistItem(propertyId: string, formData: FormData) {
+  const user = await requireRole(UserRole.OWNER, UserRole.ADMIN);
+  if (!(await canAccessProperty(user, propertyId))) throw new Error('Not authorized.');
+  const parsed = checklistTextSchema.safeParse(formData.get('text'));
+  if (!parsed.success) throw new Error(parsed.error.errors[0]?.message ?? 'Invalid item');
+
+  const last = await prisma.propertyChecklistItem.findFirst({
+    where: { propertyId },
+    orderBy: { position: 'desc' },
+    select: { position: true },
+  });
+  await prisma.propertyChecklistItem.create({
+    data: { propertyId, text: parsed.data, position: (last?.position ?? -1) + 1 },
+  });
+  revalidatePath(`/properties/${propertyId}`);
+}
+
+/** Host edits the text of a checklist item. */
+export async function updateChecklistItem(itemId: string, formData: FormData) {
+  const user = await requireRole(UserRole.OWNER, UserRole.ADMIN);
+  const item = await prisma.propertyChecklistItem.findUnique({ where: { id: itemId } });
+  if (!item) throw new Error('Item not found.');
+  if (!(await canAccessProperty(user, item.propertyId))) throw new Error('Not authorized.');
+  const parsed = checklistTextSchema.safeParse(formData.get('text'));
+  if (!parsed.success) throw new Error(parsed.error.errors[0]?.message ?? 'Invalid item');
+  await prisma.propertyChecklistItem.update({ where: { id: itemId }, data: { text: parsed.data } });
+  revalidatePath(`/properties/${item.propertyId}`);
+}
+
+/** Host deletes a checklist item. */
+export async function deleteChecklistItem(itemId: string) {
+  const user = await requireRole(UserRole.OWNER, UserRole.ADMIN);
+  const item = await prisma.propertyChecklistItem.findUnique({ where: { id: itemId } });
+  if (!item) return;
+  if (!(await canAccessProperty(user, item.propertyId))) throw new Error('Not authorized.');
+  await prisma.propertyChecklistItem.delete({ where: { id: itemId } });
+  revalidatePath(`/properties/${item.propertyId}`);
+}
+
+/** Host reorders an item by swapping positions with its neighbor. */
+export async function moveChecklistItem(itemId: string, dir: 'up' | 'down') {
+  const user = await requireRole(UserRole.OWNER, UserRole.ADMIN);
+  const item = await prisma.propertyChecklistItem.findUnique({ where: { id: itemId } });
+  if (!item) throw new Error('Item not found.');
+  if (!(await canAccessProperty(user, item.propertyId))) throw new Error('Not authorized.');
+
+  const neighbor = await prisma.propertyChecklistItem.findFirst({
+    where: {
+      propertyId: item.propertyId,
+      position: dir === 'up' ? { lt: item.position } : { gt: item.position },
+    },
+    orderBy: { position: dir === 'up' ? 'desc' : 'asc' },
+  });
+  if (!neighbor) return; // already at the end
+
+  await prisma.$transaction([
+    prisma.propertyChecklistItem.update({ where: { id: item.id }, data: { position: neighbor.position } }),
+    prisma.propertyChecklistItem.update({ where: { id: neighbor.id }, data: { position: item.position } }),
+  ]);
+  revalidatePath(`/properties/${item.propertyId}`);
+}
+
+/** Cleaner toggles a checklist item on a specific job (insert/delete the check). */
+export async function toggleJobChecklistItem(jobId: string, itemId: string) {
+  const user = await requireUser();
+  if (!(await canAccessJob(user, jobId))) throw new Error('Not authorized.');
+
+  const existing = await prisma.jobChecklistCheck.findUnique({
+    where: { jobId_itemId: { jobId, itemId } },
+  });
+  if (existing) {
+    await prisma.jobChecklistCheck.delete({ where: { id: existing.id } });
+  } else {
+    await prisma.jobChecklistCheck.create({
+      data: { jobId, itemId, checkedByUserId: user.id },
+    });
+  }
+  revalidatePath(`/jobs/${jobId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Problem reports
+// ---------------------------------------------------------------------------
+
+/**
+ * Flag a job as a problem with a written description. Photos are uploaded
+ * separately (kind=PROBLEM) via the photo endpoint. Notifies the host in-app and
+ * by email (cleaner-led model).
+ */
+export async function reportJobProblem(formData: FormData) {
+  const user = await requireUser();
+  const jobId = String(formData.get('jobId') ?? '');
+  if (!(await canAccessJob(user, jobId))) throw new Error('Not authorized.');
+  const details = String(formData.get('details') ?? '').trim();
+
+  const job = await prisma.turnoverJob.findUnique({ where: { id: jobId } });
+  if (!job) throw new Error('Job not found.');
+
+  await prisma.turnoverJob.update({
+    where: { id: jobId },
+    data: {
+      problemNote: details || null,
+      // Don't override a terminal/completed job; otherwise mark PROBLEM.
+      status: job.status === JobStatus.COMPLETED || job.status === JobStatus.CANCELED ? job.status : JobStatus.PROBLEM,
+      statusHistory:
+        job.status === JobStatus.PROBLEM
+          ? undefined
+          : { create: { fromStatus: job.status, toStatus: JobStatus.PROBLEM, changedByUserId: user.id, note: details || 'Problem reported' } },
+    },
+  });
+
+  await notify.jobProblem(jobId, job.propertyId).catch(() => undefined);
+  await notifyOwnerOfJob(jobId, 'problem').catch(() => undefined);
+
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath('/cleaner');
+  revalidatePath('/dashboard');
+}
+
+// ---------------------------------------------------------------------------
 // Sync triggers
 // ---------------------------------------------------------------------------
 

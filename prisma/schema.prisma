@@ -243,6 +243,7 @@ model Property {
   syncLogs      SyncLog[]
   ownerContact  PropertyOwnerContact?
   messageLogs   MessageLog[]
+  checklistItems PropertyChecklistItem[]
 
   @@index([ownerOrganizationId])
   @@index([assignedCleanerOrganizationId])
@@ -350,6 +351,9 @@ model TurnoverJob {
 
   ownerNotes   String?
   cleanerNotes String?
+  /// Cleaner's description of a problem when the job is flagged PROBLEM. Shown to
+  /// the host alongside any PROBLEM-kind photos.
+  problemNote  String?
 
   completedAt DateTime?
   /// Set ~30 days after completion by the cleanup cron. Archived jobs drop off
@@ -364,9 +368,10 @@ model TurnoverJob {
   assignedOrganization Organization? @relation("JobAssignedOrg", fields: [assignedOrganizationId], references: [id])
   assignedUser         User?         @relation("JobAssignee", fields: [assignedUserId], references: [id])
 
-  statusHistory JobStatusHistory[]
-  photos        JobPhoto[]
-  notifications Notification[]
+  statusHistory   JobStatusHistory[]
+  photos          JobPhoto[]
+  notifications   Notification[]
+  checklistChecks JobChecklistCheck[]
 
   @@index([propertyId])
   @@index([assignedOrganizationId])
@@ -394,17 +399,59 @@ model JobStatusHistory {
   @@index([jobId])
 }
 
+/// Whether a job photo documents a finished clean or evidence of a problem.
+enum PhotoKind {
+  COMPLETION
+  PROBLEM
+}
+
 model JobPhoto {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   jobId            String
   url              String
   caption          String?
+  kind             PhotoKind @default(COMPLETION)
   uploadedByUserId String?
-  createdAt        DateTime @default(now())
+  createdAt        DateTime  @default(now())
 
   job            TurnoverJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
   uploadedByUser User?       @relation(fields: [uploadedByUserId], references: [id])
 
+  @@index([jobId])
+  @@index([jobId, kind])
+}
+
+/// A single line on a property's cleaning checklist, authored by the host. Order
+/// is host-controlled via `position`. Checklists let hosts encode exactly how a
+/// property should be turned over (staging, supplies, quirks).
+model PropertyChecklistItem {
+  id         String   @id @default(cuid())
+  propertyId String
+  text       String
+  position   Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  property Property            @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  checks   JobChecklistCheck[]
+
+  @@index([propertyId, position])
+}
+
+/// Per-job completion state for a property checklist item. A row exists only when
+/// the item is checked off for that job; deleting it un-checks. The property
+/// template stays the source of truth for which items exist.
+model JobChecklistCheck {
+  id              String   @id @default(cuid())
+  jobId           String
+  itemId          String
+  checkedByUserId String?
+  checkedAt       DateTime @default(now())
+
+  job  TurnoverJob           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  item PropertyChecklistItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, itemId])
   @@index([jobId])
 }
 
