@@ -1,4 +1,4 @@
-import { InviteStatus, JobStatus, UserRole } from '@prisma/client';
+import { InviteStatus, JobStatus, ManagementMode, OrganizationType, UserRole } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/server/email';
 
@@ -71,12 +71,12 @@ export async function applyInvitationAcceptance(token: string, userId: string): 
   if (inv.expiresAt && inv.expiresAt < new Date()) return { ok: false, error: 'This invitation has expired.' };
 
   if (inv.propertyId && inv.invitedRole === UserRole.OWNER) {
-    // Grant host access by adding the user to the property's owner organization.
     const prop = await prisma.property.findUnique({
       where: { id: inv.propertyId },
-      select: { ownerOrganizationId: true },
+      select: { ownerOrganizationId: true, managementMode: true },
     });
-    if (prop) {
+    if (prop && prop.managementMode === ManagementMode.OWNER_MANAGED) {
+      // Already host-owned: add the invitee as a co-host of the owner org.
       const exists = await prisma.organizationMember.findFirst({
         where: { userId, organizationId: prop.ownerOrganizationId },
       });
@@ -85,6 +85,37 @@ export async function applyInvitationAcceptance(token: string, userId: string): 
           data: { userId, organizationId: prop.ownerOrganizationId, role: 'MEMBER' },
         });
       }
+    } else if (prop) {
+      // Cleaner-managed: ownerOrganizationId currently points at the cleaning
+      // company, so adding the host there would put them in the cleaner's org.
+      // Mirror the claim flow instead — transfer the property to the host's own
+      // OWNER org (creating one if needed) and flip it to OWNER_MANAGED, leaving
+      // the assigned cleaner in place so their jobs are uninterrupted.
+      let membership = await prisma.organizationMember.findFirst({
+        where: { userId, organization: { type: OrganizationType.OWNER } },
+        select: { organizationId: true },
+      });
+      if (!membership) {
+        const u = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+        const org = await prisma.organization.create({
+          data: { name: `${u?.name ?? 'My'} Rentals`, type: OrganizationType.OWNER },
+        });
+        await prisma.organizationMember.create({
+          data: { userId, organizationId: org.id, role: 'OWNER' },
+        });
+        membership = { organizationId: org.id };
+      }
+      await prisma.$transaction([
+        prisma.property.update({
+          where: { id: inv.propertyId },
+          data: { ownerOrganizationId: membership.organizationId, managementMode: ManagementMode.OWNER_MANAGED },
+        }),
+        // If an owner-contact nudge record exists, mark it claimed (in-app now).
+        prisma.propertyOwnerContact.updateMany({
+          where: { propertyId: inv.propertyId, claimedByUserId: null },
+          data: { claimedByUserId: userId, claimedAt: new Date(), notifyByEmail: false },
+        }),
+      ]);
     }
   } else if (inv.propertyId && inv.invitedRole === UserRole.CLEANER) {
     // Assign this cleaner (and their cleaning org, if any) to the property.
