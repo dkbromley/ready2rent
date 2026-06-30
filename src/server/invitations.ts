@@ -1,4 +1,4 @@
-import { InviteStatus, JobStatus, UserRole } from '@prisma/client';
+import { InviteStatus, JobStatus, OrganizationType, UserRole } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/server/email';
 
@@ -71,19 +71,48 @@ export async function applyInvitationAcceptance(token: string, userId: string): 
   if (inv.expiresAt && inv.expiresAt < new Date()) return { ok: false, error: 'This invitation has expired.' };
 
   if (inv.propertyId && inv.invitedRole === UserRole.OWNER) {
-    // Grant host access by adding the user to the property's owner organization.
     const prop = await prisma.property.findUnique({
       where: { id: inv.propertyId },
-      select: { ownerOrganizationId: true },
+      select: { ownerOrganizationId: true, ownerOrganization: { select: { type: true } }, ownerContact: { select: { id: true } } },
     });
     if (prop) {
-      const exists = await prisma.organizationMember.findFirst({
-        where: { userId, organizationId: prop.ownerOrganizationId },
-      });
-      if (!exists) {
-        await prisma.organizationMember.create({
-          data: { userId, organizationId: prop.ownerOrganizationId, role: 'MEMBER' },
+      if (prop.ownerOrganization.type === OrganizationType.OWNER) {
+        // Already host-owned → invitee becomes a co-host on the same org.
+        const exists = await prisma.organizationMember.findFirst({
+          where: { userId, organizationId: prop.ownerOrganizationId },
         });
+        if (!exists) {
+          await prisma.organizationMember.create({
+            data: { userId, organizationId: prop.ownerOrganizationId, role: 'MEMBER' },
+          });
+        }
+      } else {
+        // Cleaner-managed (owner org is the cleaning company): claim-style
+        // transfer to the host's own OWNER org, leaving the cleaner assigned.
+        let membership = await prisma.organizationMember.findFirst({
+          where: { userId, organization: { type: OrganizationType.OWNER } },
+          select: { organizationId: true },
+        });
+        if (!membership) {
+          const u = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+          const org = await prisma.organization.create({
+            data: { name: `${u?.name ?? 'My'} Rentals`, type: OrganizationType.OWNER },
+          });
+          await prisma.organizationMember.create({
+            data: { userId, organizationId: org.id, role: 'OWNER' },
+          });
+          membership = { organizationId: org.id };
+        }
+        await prisma.property.update({
+          where: { id: inv.propertyId },
+          data: { ownerOrganizationId: membership.organizationId, managementMode: 'OWNER_MANAGED' },
+        });
+        if (prop.ownerContact) {
+          await prisma.propertyOwnerContact.update({
+            where: { id: prop.ownerContact.id },
+            data: { claimedByUserId: userId, claimedAt: new Date(), notifyByEmail: false },
+          });
+        }
       }
     }
   } else if (inv.propertyId && inv.invitedRole === UserRole.CLEANER) {
