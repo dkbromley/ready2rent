@@ -23,3 +23,6 @@ DO $$ BEGIN
   ALTER TABLE "InventoryItem" ADD CONSTRAINT "InventoryItem_propertyId_fkey"
     FOREIGN KEY ("propertyId") REFERENCES "Property"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- Match the RLS posture of the rest of the schema (Prisma bypasses RLS as owner).
+ALTER TABLE "InventoryItem" ENABLE ROW LEVEL SECURITY;

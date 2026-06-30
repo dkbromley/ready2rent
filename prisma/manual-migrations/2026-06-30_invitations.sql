@@ -39,3 +39,8 @@ DO $$ BEGIN
   ALTER TABLE "Invitation" ADD CONSTRAINT "Invitation_propertyId_fkey"
     FOREIGN KEY ("propertyId") REFERENCES "Property"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- Match the RLS posture of the rest of the schema: lock out the public anon
+-- API. Prisma connects as the table owner and bypasses RLS, so app access is
+-- unaffected. (The Invitation.token column must never be reachable via anon.)
+ALTER TABLE "Invitation" ENABLE ROW LEVEL SECURITY;
