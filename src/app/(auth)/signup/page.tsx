@@ -1,23 +1,40 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState, useState } from 'react';
+import { Suspense, useActionState, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Home, Sparkles } from 'lucide-react';
 import { signupAction } from '../actions';
 import { Card, Button, Field, inputClass } from '@/components/ui';
 import { cn } from '@/lib/utils';
 
 export default function SignupPage() {
+  return (
+    <Suspense fallback={<Card className="p-7"><p className="text-sm text-navy-500">Loading…</p></Card>}>
+      <SignupForm />
+    </Suspense>
+  );
+}
+
+function SignupForm() {
+  const params = useSearchParams();
+  const invite = params.get('invite') ?? '';
+  const invitedEmail = params.get('email') ?? '';
+  const invitedRole = params.get('role') === 'CLEANER' ? 'CLEANER' : params.get('role') === 'OWNER' ? 'OWNER' : null;
+
   const [state, formAction, pending] = useActionState(signupAction, {});
-  const [role, setRole] = useState<'OWNER' | 'CLEANER'>('OWNER');
+  const [role, setRole] = useState<'OWNER' | 'CLEANER'>(invitedRole ?? 'OWNER');
 
   return (
     <Card className="p-7">
       <h1 className="text-xl font-bold text-navy-900">Create your account</h1>
-      <p className="mt-1 text-sm text-navy-500">Get checkout-to-clean in sync in minutes.</p>
+      <p className="mt-1 text-sm text-navy-500">
+        {invite ? 'Accept your invitation by creating an account.' : 'Get checkout-to-clean in sync in minutes.'}
+      </p>
 
       <form action={formAction} className="mt-6 space-y-4">
         <input type="hidden" name="role" value={role} />
+        {invite && <input type="hidden" name="invite" value={invite} />}
         <div className="grid grid-cols-2 gap-3">
           <RoleCard
             active={role === 'OWNER'}
@@ -42,7 +59,7 @@ export default function SignupPage() {
           <input name="orgName" className={inputClass} placeholder="Leave blank and we'll name it for you" />
         </Field>
         <Field label="Email">
-          <input name="email" type="email" autoComplete="email" required className={inputClass} />
+          <input name="email" type="email" autoComplete="email" required defaultValue={invitedEmail} className={inputClass} />
         </Field>
         <Field label="Password" hint="At least 8 characters">
           <input

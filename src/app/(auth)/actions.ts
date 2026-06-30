@@ -6,6 +6,7 @@ import { AuthError } from 'next-auth';
 import { OrganizationType, UserRole } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { signIn } from '@/auth';
+import { applyInvitationAcceptance } from '@/server/invitations';
 
 const signupSchema = z.object({
   name: z.string().min(1, 'Name is required').max(120),
@@ -13,6 +14,7 @@ const signupSchema = z.object({
   password: z.string().min(8, 'Use at least 8 characters'),
   role: z.enum(['OWNER', 'CLEANER']),
   orgName: z.string().max(160).optional(),
+  invite: z.string().optional(),
 });
 
 export interface AuthFormState {
@@ -34,12 +36,13 @@ export async function signupAction(
     password: formData.get('password'),
     role: formData.get('role'),
     orgName: formData.get('orgName') || undefined,
+    invite: formData.get('invite') || undefined,
   });
 
   if (!parsed.success) {
     return { error: parsed.error.errors[0]?.message ?? 'Invalid input' };
   }
-  const { name, email, password, role, orgName } = parsed.data;
+  const { name, email, password, role, orgName, invite } = parsed.data;
   const normalizedEmail = email.toLowerCase();
 
   const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
@@ -48,7 +51,7 @@ export async function signupAction(
   const passwordHash = await bcrypt.hash(password, 10);
 
   // Create the user + their first organization + membership in one transaction.
-  await prisma.user.create({
+  const newUser = await prisma.user.create({
     data: {
       name,
       email: normalizedEmail,
@@ -67,6 +70,11 @@ export async function signupAction(
       },
     },
   });
+
+  // If they arrived via an invitation, link them to the property/org now.
+  if (invite) {
+    await applyInvitationAcceptance(invite, newUser.id).catch(() => undefined);
+  }
 
   try {
     await signIn('credentials', {

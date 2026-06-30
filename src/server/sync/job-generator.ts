@@ -88,7 +88,9 @@ export async function regeneratePropertyJobs(propertyId: string): Promise<JobGen
     }
 
     // Completed jobs are immutable to date changes — preserve the record of work.
-    if (existing.status === JobStatus.COMPLETED) continue;
+    // Manually locked jobs (host/cleaner completed or canceled on purpose) are
+    // likewise left alone so a deliberate override survives the next sync.
+    if (existing.status === JobStatus.COMPLETED || existing.manualStatusLock) continue;
 
     const needsUpdate =
       existing.checkoutDateTime.getTime() !== reservation.checkOutDate.getTime() ||

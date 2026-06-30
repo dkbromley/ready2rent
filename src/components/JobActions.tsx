@@ -3,8 +3,8 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { JobStatus } from '@prisma/client';
-import { CheckCircle2, AlertTriangle, Play, CalendarCheck, Loader2 } from 'lucide-react';
-import { updateJobStatus, saveJobNotes } from '@/server/actions';
+import { CheckCircle2, AlertTriangle, Play, CalendarCheck, Loader2, XCircle } from 'lucide-react';
+import { updateJobStatus, saveJobNotes, manuallyCompleteJob, cancelJob } from '@/server/actions';
 import { JOB_NEXT_STATUSES, JOB_STATUS_META } from '@/lib/status';
 import { Button, inputClass } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -27,9 +27,15 @@ export function JobStatusActions({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [note, setNote] = useState('');
-  // Track which target button was pressed so only it shows the spinner.
+  // Track which action was pressed so only it shows the spinner.
   const [pendingTo, setPendingTo] = useState<JobStatus | null>(null);
   const next = JOB_NEXT_STATUSES[current];
+
+  const isTerminal = current === JobStatus.COMPLETED || current === JobStatus.CANCELED;
+  // Manual overrides available from any non-terminal state. Hide "Mark complete"
+  // when the normal transition already offers it, to avoid a duplicate button.
+  const showManualComplete = !isTerminal && !next.includes(JobStatus.COMPLETED);
+  const showCancel = !isTerminal;
 
   function move(to: JobStatus) {
     setPendingTo(to);
@@ -41,8 +47,33 @@ export function JobStatusActions({
     });
   }
 
-  if (next.length === 0) {
-    return <p className="text-sm text-navy-500">This job is {JOB_STATUS_META[current].label.toLowerCase()} — no further actions.</p>;
+  function complete() {
+    setPendingTo(JobStatus.COMPLETED);
+    startTransition(async () => {
+      await manuallyCompleteJob(jobId, note || undefined);
+      setNote('');
+      router.refresh();
+      setPendingTo(null);
+    });
+  }
+
+  function cancel() {
+    if (!confirm('Cancel this turnover? It will be removed from active schedules. This stays canceled even after the next calendar sync.')) return;
+    setPendingTo(JobStatus.CANCELED);
+    startTransition(async () => {
+      await cancelJob(jobId, note || undefined);
+      setNote('');
+      router.refresh();
+      setPendingTo(null);
+    });
+  }
+
+  if (isTerminal) {
+    return (
+      <p className="text-sm text-navy-500">
+        This job is {JOB_STATUS_META[current].label.toLowerCase()} — no further actions.
+      </p>
+    );
   }
 
   return (
@@ -75,7 +106,29 @@ export function JobStatusActions({
             </button>
           );
         })}
+
+        {showManualComplete && (
+          <button
+            disabled={pending}
+            onClick={complete}
+            className="inline-flex items-center gap-2 rounded-xl bg-status-completed px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+          >
+            {pendingTo === JobStatus.COMPLETED ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+            Mark complete
+          </button>
+        )}
       </div>
+
+      {showCancel && (
+        <button
+          disabled={pending}
+          onClick={cancel}
+          className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm font-medium text-status-problem ring-1 ring-inset ring-status-problem/30 transition hover:bg-coral-50 disabled:opacity-60"
+        >
+          {pendingTo === JobStatus.CANCELED ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+          Cancel turnover
+        </button>
+      )}
     </div>
   );
 }

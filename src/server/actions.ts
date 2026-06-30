@@ -18,6 +18,7 @@ import { syncFeed, syncAllActiveFeeds } from '@/server/sync/sync-service';
 import { regeneratePropertyJobs } from '@/server/sync/job-generator';
 import { notify } from '@/server/notifications';
 import { notifyOwnerOfJob } from '@/server/owner-notify';
+import { applyInvitationAcceptance, sendInvitationEmail } from '@/server/invitations';
 import { detectPlatformFromUrl } from '@/lib/feeds';
 import { storePropertyImage, deleteStoredFile } from '@/lib/storage';
 import { MAX_IMAGE_BYTES, ALLOWED_IMAGE_TYPES } from '@/lib/limits';
@@ -213,6 +214,86 @@ export async function assignCleaner(formData: FormData) {
 }
 
 // ---------------------------------------------------------------------------
+// Invitations (host <-> cleaner)
+// ---------------------------------------------------------------------------
+
+const inviteSchema = z.object({
+  email: z.string().email('Enter a valid email'),
+  invitedRole: z.enum(['OWNER', 'CLEANER']),
+  propertyId: z.string().optional(),
+});
+
+/** Invite a cleaner (or host) by email, optionally linking them to a property. */
+export async function createInvitation(formData: FormData) {
+  const user = await requireUser();
+  const parsed = inviteSchema.safeParse({
+    email: formData.get('email'),
+    invitedRole: formData.get('invitedRole'),
+    propertyId: formData.get('propertyId') || undefined,
+  });
+  if (!parsed.success) throw new Error(parsed.error.errors[0]?.message ?? 'Invalid invitation');
+  const { email, invitedRole, propertyId } = parsed.data;
+
+  if (propertyId && !(await canAccessProperty(user, propertyId))) {
+    throw new Error('Not authorized.');
+  }
+
+  // Record-keeping: tie the invite to the inviter's first org.
+  const membership = await prisma.organizationMember.findFirst({
+    where: { userId: user.id },
+    select: { organizationId: true },
+  });
+
+  // Avoid stacking duplicate pending invites for the same email+property.
+  const dupe = await prisma.invitation.findFirst({
+    where: { email: email.toLowerCase(), propertyId: propertyId ?? null, status: 'PENDING' },
+  });
+  if (dupe) {
+    await sendInvitationEmail(dupe.id);
+  } else {
+    const invitation = await prisma.invitation.create({
+      data: {
+        email: email.toLowerCase(),
+        invitedRole: invitedRole as UserRole,
+        invitedByUserId: user.id,
+        organizationId: membership?.organizationId ?? null,
+        propertyId: propertyId ?? null,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      },
+    });
+    await sendInvitationEmail(invitation.id);
+  }
+
+  if (propertyId) revalidatePath(`/properties/${propertyId}`);
+}
+
+export async function revokeInvitation(invitationId: string) {
+  const user = await requireUser();
+  const inv = await prisma.invitation.findUnique({ where: { id: invitationId } });
+  if (!inv) return;
+  // Only the inviter (or someone who can access the linked property) may revoke.
+  const allowed =
+    inv.invitedByUserId === user.id ||
+    (inv.propertyId ? await canAccessProperty(user, inv.propertyId) : false);
+  if (!allowed) throw new Error('Not authorized.');
+  await prisma.invitation.update({ where: { id: invitationId }, data: { status: 'REVOKED' } });
+  if (inv.propertyId) revalidatePath(`/properties/${inv.propertyId}`);
+}
+
+/** Accept an invitation as the currently signed-in user. */
+export async function acceptInvitation(token: string) {
+  const user = await requireUser();
+  const result = await applyInvitationAcceptance(token, user.id);
+  if (!result.ok) throw new Error(result.error ?? 'Could not accept invitation.');
+  revalidatePath('/dashboard');
+  if (result.propertyId) {
+    revalidatePath(`/properties/${result.propertyId}`);
+    redirect(`/properties/${result.propertyId}`);
+  }
+  redirect('/dashboard');
+}
+
+// ---------------------------------------------------------------------------
 // Job status & notes
 // ---------------------------------------------------------------------------
 
@@ -251,6 +332,76 @@ export async function updateJobStatus(jobId: string, toStatus: JobStatus, note?:
   // Owner-facing email (cleaner-led model): cleaning started / ready for arrival.
   if (toStatus === JobStatus.IN_PROGRESS) await notifyOwnerOfJob(jobId, 'started').catch(() => undefined);
   else if (toStatus === JobStatus.COMPLETED) await notifyOwnerOfJob(jobId, 'completed').catch(() => undefined);
+
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath('/cleaner');
+  revalidatePath('/dashboard');
+}
+
+/**
+ * Manually mark a job complete from any state (host or cleaner). Sets the manual
+ * lock so a later sync won't reopen or re-date it, and notifies as a completion.
+ */
+export async function manuallyCompleteJob(jobId: string, note?: string) {
+  const user = await requireUser();
+  if (!(await canAccessJob(user, jobId))) throw new Error('Not authorized.');
+  const job = await prisma.turnoverJob.findUnique({ where: { id: jobId } });
+  if (!job) throw new Error('Job not found.');
+  if (job.status === JobStatus.COMPLETED) return;
+
+  await prisma.turnoverJob.update({
+    where: { id: jobId },
+    data: {
+      status: JobStatus.COMPLETED,
+      completedAt: new Date(),
+      manualStatusLock: true,
+      statusHistory: {
+        create: {
+          fromStatus: job.status,
+          toStatus: JobStatus.COMPLETED,
+          changedByUserId: user.id,
+          note: note?.trim() || 'Marked complete manually',
+        },
+      },
+    },
+  });
+
+  await notify.jobCompleted(jobId, job.propertyId).catch(() => undefined);
+  await notifyOwnerOfJob(jobId, 'completed').catch(() => undefined);
+
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath('/cleaner');
+  revalidatePath('/dashboard');
+}
+
+/**
+ * Cancel a scheduled job (host or cleaner). Locks it so the next sync won't
+ * revive it while the reservation is still live. Completed jobs are left intact.
+ */
+export async function cancelJob(jobId: string, note?: string) {
+  const user = await requireUser();
+  if (!(await canAccessJob(user, jobId))) throw new Error('Not authorized.');
+  const job = await prisma.turnoverJob.findUnique({ where: { id: jobId } });
+  if (!job) throw new Error('Job not found.');
+  if (job.status === JobStatus.CANCELED || job.status === JobStatus.COMPLETED) return;
+
+  await prisma.turnoverJob.update({
+    where: { id: jobId },
+    data: {
+      status: JobStatus.CANCELED,
+      manualStatusLock: true,
+      statusHistory: {
+        create: {
+          fromStatus: job.status,
+          toStatus: JobStatus.CANCELED,
+          changedByUserId: user.id,
+          note: note?.trim() || 'Canceled manually',
+        },
+      },
+    },
+  });
+
+  await notify.jobCanceled(jobId, job.propertyId).catch(() => undefined);
 
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath('/cleaner');
@@ -373,6 +524,89 @@ export async function toggleJobChecklistItem(jobId: string, itemId: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Inventory (supplies + linens, per property)
+// ---------------------------------------------------------------------------
+
+const inventorySchema = z.object({
+  category: z.enum(['SUPPLY', 'LINEN']).default('SUPPLY'),
+  name: z.string().trim().min(1, 'Name is required').max(120),
+  size: z.string().trim().max(60).optional().or(z.literal('')),
+  unit: z.string().trim().max(40).optional().or(z.literal('')),
+  quantity: z.coerce.number().int().min(0).max(100000).default(0),
+  parLevel: z.preprocess(
+    (v) => (v === '' || v == null ? undefined : v),
+    z.coerce.number().int().min(0).max(100000).optional(),
+  ),
+  notes: z.string().trim().max(500).optional().or(z.literal('')),
+});
+
+/** Host or assigned cleaner adds an inventory item to a property. */
+export async function addInventoryItem(propertyId: string, formData: FormData) {
+  const user = await requireUser();
+  if (!(await canAccessProperty(user, propertyId))) throw new Error('Not authorized.');
+  const parsed = inventorySchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) throw new Error(parsed.error.errors[0]?.message ?? 'Invalid item');
+  const d = parsed.data;
+  await prisma.inventoryItem.create({
+    data: {
+      propertyId,
+      category: d.category as 'SUPPLY' | 'LINEN',
+      name: d.name,
+      size: d.size || null,
+      unit: d.unit || null,
+      quantity: d.quantity,
+      parLevel: d.parLevel ?? null,
+      notes: d.notes || null,
+    },
+  });
+  revalidatePath(`/properties/${propertyId}`);
+}
+
+/** Edit an inventory item's fields. */
+export async function updateInventoryItem(itemId: string, formData: FormData) {
+  const user = await requireUser();
+  const item = await prisma.inventoryItem.findUnique({ where: { id: itemId } });
+  if (!item) throw new Error('Item not found.');
+  if (!(await canAccessProperty(user, item.propertyId))) throw new Error('Not authorized.');
+  const parsed = inventorySchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) throw new Error(parsed.error.errors[0]?.message ?? 'Invalid item');
+  const d = parsed.data;
+  await prisma.inventoryItem.update({
+    where: { id: itemId },
+    data: {
+      category: d.category as 'SUPPLY' | 'LINEN',
+      name: d.name,
+      size: d.size || null,
+      unit: d.unit || null,
+      quantity: d.quantity,
+      parLevel: d.parLevel ?? null,
+      notes: d.notes || null,
+    },
+  });
+  revalidatePath(`/properties/${item.propertyId}`);
+}
+
+/** Bump a single item's quantity up or down (clamped at 0) — the +/- steppers. */
+export async function adjustInventoryQuantity(itemId: string, delta: number) {
+  const user = await requireUser();
+  const item = await prisma.inventoryItem.findUnique({ where: { id: itemId } });
+  if (!item) throw new Error('Item not found.');
+  if (!(await canAccessProperty(user, item.propertyId))) throw new Error('Not authorized.');
+  const next = Math.max(0, Math.min(100000, item.quantity + delta));
+  await prisma.inventoryItem.update({ where: { id: itemId }, data: { quantity: next } });
+  revalidatePath(`/properties/${item.propertyId}`);
+}
+
+export async function deleteInventoryItem(itemId: string) {
+  const user = await requireUser();
+  const item = await prisma.inventoryItem.findUnique({ where: { id: itemId } });
+  if (!item) return;
+  if (!(await canAccessProperty(user, item.propertyId))) throw new Error('Not authorized.');
+  await prisma.inventoryItem.delete({ where: { id: itemId } });
+  revalidatePath(`/properties/${item.propertyId}`);
+}
+
+// ---------------------------------------------------------------------------
 // Problem reports
 // ---------------------------------------------------------------------------
 
@@ -462,6 +696,27 @@ export async function markAllNotificationsRead() {
     data: { read: true },
   });
   revalidatePath('/notifications');
+}
+
+/** Save the current user's per-category notification opt-outs (checkbox form). */
+export async function updateNotificationPreferences(formData: FormData) {
+  const user = await requireUser();
+  // Unchecked checkboxes are absent from the form → false.
+  const on = (key: string) => formData.get(key) != null;
+  const data = {
+    newJobs: on('newJobs'),
+    jobChanges: on('jobChanges'),
+    jobCompleted: on('jobCompleted'),
+    jobCanceled: on('jobCanceled'),
+    sameDayTurnover: on('sameDayTurnover'),
+    problems: on('problems'),
+  };
+  await prisma.notificationPreference.upsert({
+    where: { userId: user.id },
+    create: { userId: user.id, ...data },
+    update: data,
+  });
+  revalidatePath('/settings/notifications');
 }
 
 // ---------------------------------------------------------------------------

@@ -120,6 +120,7 @@ enum NotificationType {
   JOB_CHANGED
   JOB_COMPLETED
   JOB_CANCELED
+  JOB_PROBLEM
   RESERVATION_CHANGED
   RESERVATION_CANCELED
   SAME_DAY_TURNOVER
@@ -148,11 +149,68 @@ model User {
   statusChanges          JobStatusHistory[]
   uploadedPhotos         JobPhoto[]
   notifications          Notification[]
+  notificationPreference NotificationPreference?
   assignedProperties     Property[]              @relation("PropertyCleanerUser")
   createdProperties      Property[]              @relation("PropertyCreatedBy")
   serviceProviderProfile ServiceProviderProfile?
+  invitesSent            Invitation[]            @relation("InvitesSent")
+  invitesAccepted        Invitation[]            @relation("InvitesAccepted")
 
   @@index([role])
+}
+
+/// Connects hosts and cleaners. A host can invite a cleaner (or vice versa) by
+/// email; accepting links the invitee to the property/org. Off-platform hosts
+/// also have the lighter-weight PropertyOwnerContact claim flow; this is the
+/// account-to-account version.
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+}
+
+model Invitation {
+  id               String       @id @default(cuid())
+  token            String       @unique @default(cuid())
+  email            String
+  /// Role the invitee will act as for this connection (OWNER = host, CLEANER).
+  invitedRole      UserRole
+  status           InviteStatus @default(PENDING)
+  invitedByUserId  String
+  /// Inviter's organization the invitee is linked to on accept.
+  organizationId   String?
+  /// Optional property to assign (cleaner) or grant host access to on accept.
+  propertyId       String?
+  acceptedByUserId String?
+  acceptedAt       DateTime?
+  createdAt        DateTime     @default(now())
+  expiresAt        DateTime?
+
+  invitedBy    User          @relation("InvitesSent", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+  acceptedBy   User?         @relation("InvitesAccepted", fields: [acceptedByUserId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  property     Property?     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([status])
+  @@index([propertyId])
+}
+
+/// Per-user in-app notification opt-outs. A missing row = everything on (the
+/// default). Lets hosts mute categories so they aren't pinged on every event.
+model NotificationPreference {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  newJobs         Boolean  @default(true)
+  jobChanges      Boolean  @default(true)
+  jobCompleted    Boolean  @default(true)
+  jobCanceled     Boolean  @default(true)
+  sameDayTurnover Boolean  @default(true)
+  problems        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Organization {
@@ -168,6 +226,7 @@ model Organization {
   linenForProperties     Property[]              @relation("PropertyLinenOrg")
   assignedJobs           TurnoverJob[]           @relation("JobAssignedOrg")
   serviceProviderProfile ServiceProviderProfile?
+  invitations            Invitation[]
 
   @@index([type])
 }
@@ -244,6 +303,8 @@ model Property {
   ownerContact  PropertyOwnerContact?
   messageLogs   MessageLog[]
   checklistItems PropertyChecklistItem[]
+  invitations   Invitation[]
+  inventoryItems InventoryItem[]
 
   @@index([ownerOrganizationId])
   @@index([assignedCleanerOrganizationId])
@@ -348,6 +409,10 @@ model TurnoverJob {
 
   status   JobStatus   @default(NEEDS_SCHEDULING)
   priority JobPriority @default(NORMAL)
+  /// Set when a host/cleaner manually completes or cancels a job. Locks the job
+  /// against the sync's auto date-updates and CANCELED→reopen revival, so a
+  /// deliberate override isn't undone on the next feed sync.
+  manualStatusLock Boolean @default(false)
 
   ownerNotes   String?
   cleanerNotes String?
@@ -453,6 +518,40 @@ model JobChecklistCheck {
 
   @@unique([jobId, itemId])
   @@index([jobId])
+}
+
+// ---------------------------------------------------------------------------
+// Inventory (cleaning supplies + linens, per property)
+// ---------------------------------------------------------------------------
+
+enum InventoryCategory {
+  SUPPLY
+  LINEN
+}
+
+/// Stock a property needs on hand: cleaning supplies (soap, paper) and linens
+/// (towels, sheets, pillowcases) tracked by size. Hosts and the assigned cleaner
+/// can both create and adjust items. `parLevel` marks the desired level; below it
+/// the item reads as low.
+model InventoryItem {
+  id         String            @id @default(cuid())
+  propertyId String
+  category   InventoryCategory @default(SUPPLY)
+  name       String
+  /// Linen size, e.g. "Queen", "King", "Bath", "Hand", "Standard". Null for supplies.
+  size       String?
+  /// Counting unit, e.g. "rolls", "bottles", "sets", "pcs".
+  unit       String?
+  quantity   Int               @default(0)
+  /// Desired on-hand level; quantity below this flags the item as low. Null = untracked.
+  parLevel   Int?
+  notes      String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, category])
 }
 
 // ---------------------------------------------------------------------------
