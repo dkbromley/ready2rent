@@ -70,7 +70,7 @@ export async function notifyOwnerOfJob(jobId: string, kind: Kind): Promise<void>
   const html = `
   <div style="font-family:ui-sans-serif,system-ui,sans-serif;max-width:560px;margin:auto;color:#1d2748">
     <div style="padding:20px 0">
-      <span style="font-size:18px;font-weight:700;color:#138585">Ready2Rent</span>
+      <span style="font-size:18px;font-weight:700;color:#0d9488">Ready2Rent</span>
     </div>
     <p>Hi ${escapeHtml(ownerFirst)},</p>
     <p style="font-size:15px;line-height:1.5">${lead}</p>
@@ -80,11 +80,11 @@ export async function notifyOwnerOfJob(jobId: string, kind: Kind): Promise<void>
       ${notesBlock}
     </table>
     <div style="padding:20px 0">
-      <a href="${statusUrl}" style="background:#138585;color:#fff;text-decoration:none;padding:11px 18px;border-radius:12px;font-weight:600;font-size:14px">See live status &amp; photos</a>
+      <a href="${statusUrl}" style="background:#0d9488;color:#fff;text-decoration:none;padding:11px 18px;border-radius:12px;font-weight:600;font-size:14px">See live status &amp; photos</a>
     </div>
     <p style="font-size:13px;color:#85a3ca;line-height:1.5">
       You're getting this because ${escapeHtml(cleaner)} cleans this property for you and added it to Ready2Rent.
-      Want to track every turnover yourself? <a href="${base}/claim/${contact.claimToken}" style="color:#138585">Claim this property free</a>.
+      Want to track every turnover yourself? <a href="${base}/claim/${contact.claimToken}" style="color:#0d9488">Claim this property free</a>.
     </p>
     <p style="font-size:12px;color:#adc3dd">
       <a href="${unsubUrl}" style="color:#adc3dd">Unsubscribe from these updates</a>
