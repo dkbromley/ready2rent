@@ -70,11 +70,14 @@ export function AppShell({
   const primary = items.filter((i) => i.primary).slice(0, 4);
 
   return (
-    <div className="min-h-screen bg-sand-50">
-      <header className="sticky top-0 z-30 border-b border-navy-100 bg-white/90 backdrop-blur">
+    <div className="app-bg min-h-screen">
+      <header className="sticky top-0 z-30 border-b border-sand-200 bg-white/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          <Link href="/dashboard" className="inline-flex items-center gap-2 font-bold text-navy-900">
-            <Waves className="h-5 w-5 text-brand-600" /> Ready2Rent
+          <Link href="/dashboard" className="inline-flex items-center gap-2 text-base font-extrabold tracking-tight text-navy-900">
+            <span className="grid h-7 w-7 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-[0_4px_12px_-2px_rgba(20,184,166,0.5)]">
+              <Waves className="h-4 w-4" />
+            </span>
+            Ready2Rent
           </Link>
           <div className="flex items-center gap-2">
             <Link href="/notifications" className="relative rounded-lg p-2 text-navy-600 hover:bg-navy-50">
@@ -102,7 +105,7 @@ export function AppShell({
         {/* Sidebar — desktop static, mobile drawer (opened via "More"). */}
         <aside
           className={cn(
-            'fixed inset-y-0 left-0 z-40 w-60 transform border-r border-navy-100 bg-white pt-4 transition-transform lg:static lg:z-0 lg:translate-x-0 lg:pt-0',
+            'fixed inset-y-0 left-0 z-40 w-60 transform border-r border-sand-200 bg-white/70 pt-4 backdrop-blur transition-transform lg:static lg:z-0 lg:translate-x-0 lg:pt-0',
             drawerOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           )}
         >
@@ -121,8 +124,10 @@ export function AppShell({
                   href={item.href}
                   onClick={() => setDrawerOpen(false)}
                   className={cn(
-                    'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition',
-                    active ? 'bg-brand-50 text-brand-800' : 'text-navy-600 hover:bg-navy-50',
+                    'flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition',
+                    active
+                      ? 'bg-brand-50 font-semibold text-brand-800 ring-1 ring-inset ring-brand-600/10'
+                      : 'font-medium text-navy-600 hover:bg-brand-50/60 hover:text-brand-700',
                   )}
                 >
                   {item.icon}

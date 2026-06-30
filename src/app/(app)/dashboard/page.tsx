@@ -17,10 +17,16 @@ export default async function DashboardPage() {
 
   const d = await getOwnerDashboard(user);
 
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+
   return (
     <div>
       <PageHeader
-        eyebrow="Overview"
+        eyebrow={`Today · ${today}`}
         title="Dashboard"
         subtitle="Your turnover operations at a glance."
         action={
