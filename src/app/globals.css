@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 :root {
+  /* Fallback only — next/font sets --font-sans to Plus Jakarta Sans on <html>. */
   --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -11,17 +12,26 @@ html {
 }
 
 body {
-  @apply bg-sand-50 text-navy-900 antialiased;
+  @apply bg-sand-50 font-sans text-navy-900 antialiased;
 }
 
-/* Subtle coastal page gradient for marketing surfaces. */
+/* Soft seafoam + ocean-blue page glow over warm sand (auth/marketing surfaces). */
 .coastal-gradient {
-  background: radial-gradient(1200px 600px at 80% -10%, #d4f6f4 0%, transparent 55%),
-    radial-gradient(900px 500px at 0% 0%, #e4eaf4 0%, transparent 45%), #fbf9f4;
+  background: radial-gradient(1100px 560px at 84% -8%, #cffaf0 0%, transparent 56%),
+    radial-gradient(820px 480px at -5% 0%, #e0f2fe 0%, transparent 48%), #fbf9f4;
+}
+
+/* Deep-ocean hero for marketing/auth surfaces: dark teal-navy with a seafoam
+   and sky glow. White text by default. */
+.ocean-hero {
+  background: radial-gradient(840px 460px at 82% -20%, rgba(45, 212, 191, 0.42), transparent 60%),
+    radial-gradient(560px 380px at 4% 120%, rgba(56, 189, 248, 0.26), transparent 60%),
+    linear-gradient(180deg, #06302f 0%, #0c3f3c 100%);
+  color: #fff;
 }
 
 .card {
-  @apply rounded-2xl border border-navy-100 bg-white shadow-card;
+  @apply rounded-2xl border border-sand-100 bg-white shadow-card;
 }
 
 /* Loading skeleton shimmer + indeterminate progress bar */
@@ -53,7 +63,7 @@ body {
   top: 0;
   height: 100%;
   border-radius: 2px;
-  background: #138585;
+  background: #14b8a6;
   animation: tr-progress 1.1s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
