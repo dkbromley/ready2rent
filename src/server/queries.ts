@@ -293,6 +293,7 @@ export async function getPropertyDetail(propertyId: string) {
         include: { reservation: true },
         orderBy: { checkoutDateTime: 'asc' },
       },
+      checklistItems: { orderBy: { position: 'asc' } },
     },
   });
 }
@@ -301,11 +302,12 @@ export async function getJobDetail(jobId: string) {
   return prisma.turnoverJob.findUnique({
     where: { id: jobId },
     include: {
-      property: true,
+      property: { include: { checklistItems: { orderBy: { position: 'asc' } } } },
       reservation: true,
       assignedUser: true,
       assignedOrganization: true,
       photos: { orderBy: { createdAt: 'desc' } },
+      checklistChecks: true,
       statusHistory: {
         include: { changedByUser: { select: { name: true, email: true } } },
         orderBy: { createdAt: 'desc' },

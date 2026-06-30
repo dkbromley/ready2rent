@@ -19,7 +19,7 @@ export default async function AdminAnalyticsPage() {
       <SectionTitle>Platform</SectionTitle>
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
         <StatTile icon={<Users className="h-5 w-5" />} tone="teal" label="Users" value={a.totals.users} />
-        <StatTile icon={<Home className="h-5 w-5" />} tone="neutral" label="Owners" value={a.totals.owners} />
+        <StatTile icon={<Home className="h-5 w-5" />} tone="neutral" label="Hosts" value={a.totals.owners} />
         <StatTile icon={<Users className="h-5 w-5" />} tone="neutral" label="Cleaners" value={a.totals.cleaners} />
         <StatTile icon={<Building2 className="h-5 w-5" />} tone="teal" label="Properties" value={a.totals.properties} />
         <StatTile icon={<CalendarRange className="h-5 w-5" />} tone="neutral" label="Reservations" value={a.totals.reservations} />

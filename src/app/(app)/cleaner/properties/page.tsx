@@ -15,7 +15,7 @@ export default async function CleanerPropertiesPage() {
     <div>
       <PageHeader
         title="My properties"
-        subtitle="Properties you clean. Add one with the owner's calendar link — no owner account needed."
+        subtitle="Properties you clean. Add one with the host's calendar link — no host account needed."
         action={
           <LinkButton href="/cleaner/properties/new">
             <Plus className="h-4 w-4" /> Add property
@@ -26,7 +26,7 @@ export default async function CleanerPropertiesPage() {
       {properties.length === 0 ? (
         <EmptyState
           title="No properties yet"
-          description="Get the Airbnb or Vrbo iCal link from an owner you work for, paste it here, and the turnover schedule imports automatically."
+          description="Get the Airbnb or Vrbo iCal link from a host you work for, paste it here, and the turnover schedule imports automatically."
           action={<LinkButton href="/cleaner/properties/new"><Plus className="h-4 w-4" /> Add your first property</LinkButton>}
         />
       ) : (
@@ -65,9 +65,9 @@ export default async function CleanerPropertiesPage() {
                   <div className="mt-2 flex items-center gap-1.5 text-xs">
                     <Mail className="h-3.5 w-3.5 text-navy-400" />
                     {p.ownerContact?.email ? (
-                      <span className="text-navy-600">Owner notified: {p.ownerContact.email}</span>
+                      <span className="text-navy-600">Host notified: {p.ownerContact.email}</span>
                     ) : (
-                      <span className="text-navy-400">No owner contact</span>
+                      <span className="text-navy-400">No host contact</span>
                     )}
                   </div>
                 </Link>

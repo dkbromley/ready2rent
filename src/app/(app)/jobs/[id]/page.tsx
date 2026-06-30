@@ -22,6 +22,8 @@ import { PageHeader, Card, SectionTitle } from '@/components/ui';
 import { JobStatusBadge, PriorityBadge, SameDayBadge } from '@/components/StatusBadge';
 import { JobStatusActions, JobNotes } from '@/components/JobActions';
 import { JobPhotos } from '@/components/JobPhotos';
+import { JobChecklist } from '@/components/JobChecklist';
+import { ProblemReport } from '@/components/ProblemReport';
 import { formatInTz } from '@/lib/datetime';
 import { formatTurnoverWindow, JOB_STATUS_META } from '@/lib/status';
 
@@ -37,6 +39,15 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const isOwner = user.role === UserRole.OWNER || user.role === UserRole.ADMIN;
   const isCleaner = user.role === UserRole.CLEANER || user.role === UserRole.ADMIN;
   const backHref = user.role === UserRole.CLEANER ? '/cleaner' : '/jobs';
+
+  const checkedIds = new Set(job.checklistChecks.map((c) => c.itemId));
+  const checklistItems = job.property.checklistItems.map((i) => ({
+    id: i.id,
+    text: i.text,
+    checked: checkedIds.has(i.id),
+  }));
+  const completionPhotos = job.photos.filter((p) => p.kind === 'COMPLETION');
+  const problemPhotos = job.photos.filter((p) => p.kind === 'PROBLEM');
 
   return (
     <div>
@@ -106,13 +117,30 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             />
           </Card>
 
+          {/* Cleaning checklist */}
+          <Card>
+            <SectionTitle>Cleaning checklist</SectionTitle>
+            <JobChecklist jobId={job.id} items={checklistItems} canCheck={isCleaner} />
+          </Card>
+
+          {/* Problem report */}
+          <Card>
+            <SectionTitle>Report a problem</SectionTitle>
+            <ProblemReport
+              jobId={job.id}
+              canReport={isCleaner}
+              problemNote={job.problemNote}
+              photos={problemPhotos.map((p) => ({ id: p.id, url: p.url, caption: p.caption }))}
+            />
+          </Card>
+
           {/* Photos */}
           <Card>
             <SectionTitle>Completion photos</SectionTitle>
             <JobPhotos
               jobId={job.id}
               canManage={isCleaner}
-              photos={job.photos.map((p) => ({ id: p.id, url: p.url, caption: p.caption }))}
+              photos={completionPhotos.map((p) => ({ id: p.id, url: p.url, caption: p.caption }))}
             />
           </Card>
         </div>

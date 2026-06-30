@@ -94,7 +94,7 @@ export default async function ClaimPage({ params }: { params: Promise<{ token: s
               </form>
             ) : user ? (
               <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
-                You&apos;re signed in as a cleaner. <Link href="/api/auth/signout" className="font-medium underline">Sign out</Link> to claim this property as the owner.
+                You&apos;re signed in as a cleaner. <Link href="/api/auth/signout" className="font-medium underline">Sign out</Link> to claim this property as the host.
               </p>
             ) : (
               <ClaimForm token={token} defaultEmail={contact.email ?? ''} />

@@ -111,13 +111,13 @@ export function JobNotes({
       <input type="hidden" name="jobId" value={jobId} />
       {canEditOwner ? (
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-navy-700">Owner notes</span>
+          <span className="mb-1 block text-sm font-medium text-navy-700">Host notes</span>
           <textarea name="ownerNotes" rows={3} defaultValue={ownerNotes ?? ''} className={inputClass} />
         </label>
       ) : (
         ownerNotes && (
           <div>
-            <p className="text-sm font-medium text-navy-700">Owner notes</p>
+            <p className="text-sm font-medium text-navy-700">Host notes</p>
             <p className="mt-1 whitespace-pre-wrap rounded-xl bg-navy-50 p-3 text-sm text-navy-600">{ownerNotes}</p>
           </div>
         )

@@ -23,7 +23,7 @@ export default function SignupPage() {
             active={role === 'OWNER'}
             onClick={() => setRole('OWNER')}
             icon={<Home className="h-5 w-5" />}
-            title="Property owner"
+            title="Host"
             desc="I manage rentals"
           />
           <RoleCard

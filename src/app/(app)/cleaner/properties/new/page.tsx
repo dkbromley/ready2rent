@@ -15,12 +15,12 @@ export default async function NewCleanerPropertyPage() {
       <Link href="/cleaner/properties" className="mb-4 inline-flex items-center gap-1 text-sm text-navy-500 hover:text-navy-700">
         <ArrowLeft className="h-4 w-4" /> My properties
       </Link>
-      <PageHeader title="Add a property" subtitle="Paste the owner's calendar link — we import the schedule automatically." />
+      <PageHeader title="Add a property" subtitle="Paste the host's calendar link — we import the schedule automatically." />
 
       <Card className="mb-4 flex items-start gap-3 border-brand-200 bg-brand-50/50">
         <Info className="mt-0.5 h-5 w-5 shrink-0 text-brand-700" />
         <p className="text-sm text-navy-600">
-          Ask the owner for the property's <strong>Airbnb or Vrbo calendar export (iCal) link</strong>.
+          Ask the host for the property's <strong>Airbnb or Vrbo calendar export (iCal) link</strong>.
           We'll pull reservations and build your turnover schedule. The calendar link only contains
           booking dates — not the property name or address — so add those yourself below.
         </p>
@@ -32,7 +32,7 @@ export default async function NewCleanerPropertyPage() {
             <input name="name" required placeholder="e.g. Smith Beach House" className={inputClass} />
           </Field>
 
-          <Field label="Calendar (iCal) link" hint="From the owner's Airbnb/Vrbo calendar export settings. We auto-detect the platform.">
+          <Field label="Calendar (iCal) link" hint="From the host's Airbnb/Vrbo calendar export settings. We auto-detect the platform.">
             <input name="feedUrl" type="url" required placeholder="https://www.airbnb.com/calendar/ical/12345.ics?s=…" className={inputClass} />
           </Field>
 
@@ -77,21 +77,21 @@ export default async function NewCleanerPropertyPage() {
           </details>
 
           <div className="rounded-xl border border-navy-100 p-4">
-            <p className="text-sm font-semibold text-navy-800">Owner notifications</p>
+            <p className="text-sm font-semibold text-navy-800">Host notifications</p>
             <p className="mb-3 mt-0.5 text-xs text-navy-500">
-              We'll email the owner when you start and finish each turnover (with your notes). They don't need an account.
+              We'll email the host when you start and finish each turnover (with your notes). They don't need an account.
             </p>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Owner name"><input name="ownerName" className={inputClass} /></Field>
-                <Field label="Owner phone (optional)"><input name="ownerPhone" className={inputClass} /></Field>
+                <Field label="Host name"><input name="ownerName" className={inputClass} /></Field>
+                <Field label="Host phone (optional)"><input name="ownerPhone" className={inputClass} /></Field>
               </div>
-              <Field label="Owner email">
-                <input name="ownerEmail" type="email" placeholder="owner@example.com" className={inputClass} />
+              <Field label="Host email">
+                <input name="ownerEmail" type="email" placeholder="host@example.com" className={inputClass} />
               </Field>
               <label className="flex items-center gap-2 text-sm text-navy-700">
                 <input type="checkbox" name="notifyByEmail" defaultChecked className="h-4 w-4 rounded border-navy-300 text-brand-600 focus:ring-brand-500" />
-                Email the owner turnover updates
+                Email the host turnover updates
               </label>
             </div>
           </div>

@@ -11,7 +11,7 @@ import { formatInTz } from '@/lib/datetime';
  * "join free" CTA — the incentive that pulls owners onto the platform — and an
  * unsubscribe link (CAN-SPAM hygiene).
  */
-type Kind = 'started' | 'completed';
+type Kind = 'started' | 'completed' | 'problem';
 
 function appBase(): string {
   return process.env.AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://ready2rent.netlify.app';
@@ -44,21 +44,28 @@ export async function notifyOwnerOfJob(jobId: string, kind: Kind): Promise<void>
   const subject =
     kind === 'started'
       ? `Turnover started at ${propertyName}`
-      : `${propertyName} is clean and guest-ready`;
+      : kind === 'problem'
+        ? `Problem reported at ${propertyName}`
+        : `${propertyName} is clean and guest-ready`;
 
   const lead =
     kind === 'started'
       ? `${cleaner} has started the turnover at <strong>${propertyName}</strong>.`
-      : `${cleaner} has finished the turnover at <strong>${propertyName}</strong> — it's clean and ready for your next guests.`;
+      : kind === 'problem'
+        ? `${cleaner} flagged a problem during the turnover at <strong>${propertyName}</strong> that may need your attention.`
+        : `${cleaner} has finished the turnover at <strong>${propertyName}</strong> — it's clean and ready for your next guests.`;
 
   const checkoutLine = `Checkout: ${formatInTz(job.checkoutDateTime, tz)}`;
   const nextLine = job.nextCheckInDateTime
     ? `Next check-in: ${formatInTz(job.nextCheckInDateTime, tz)}`
     : '';
-  const notesBlock =
-    kind === 'completed' && job.cleanerNotes
-      ? `<tr><td style="padding:12px 0"><div style="background:#f4efe2;border-radius:12px;padding:14px;color:#3e4d81;font-size:14px"><strong>Notes from ${cleaner}:</strong><br/>${escapeHtml(job.cleanerNotes)}</div></td></tr>`
-      : '';
+  // Surface the relevant note: cleaner's wrap-up on completion, the problem
+  // description when flagged.
+  const noteText = kind === 'problem' ? job.problemNote : kind === 'completed' ? job.cleanerNotes : null;
+  const noteLabel = kind === 'problem' ? 'Problem details' : `Notes from ${cleaner}`;
+  const notesBlock = noteText
+    ? `<tr><td style="padding:12px 0"><div style="background:#f4efe2;border-radius:12px;padding:14px;color:#3e4d81;font-size:14px"><strong>${noteLabel}:</strong><br/>${escapeHtml(noteText)}</div></td></tr>`
+    : '';
 
   const html = `
   <div style="font-family:ui-sans-serif,system-ui,sans-serif;max-width:560px;margin:auto;color:#1d2748">
@@ -88,7 +95,7 @@ export async function notifyOwnerOfJob(jobId: string, kind: Kind): Promise<void>
     to: contact.email,
     subject,
     html,
-    type: kind === 'started' ? 'owner_job_started' : 'owner_job_completed',
+    type: `owner_job_${kind}`,
     propertyId: job.propertyId,
     jobId: job.id,
     ownerContactId: contact.id,

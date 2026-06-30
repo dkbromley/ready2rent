@@ -3,6 +3,7 @@ import { getCurrentUser, canAccessJob } from '@/lib/rbac';
 import { prisma } from '@/lib/prisma';
 import { storeJobPhoto } from '@/lib/storage';
 import { MAX_PHOTOS_PER_JOB, MAX_IMAGE_BYTES, ALLOWED_IMAGE_TYPES } from '@/lib/limits';
+import { PhotoKind } from '@prisma/client';
 
 export const runtime = 'nodejs';
 
@@ -18,7 +19,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const existing = await prisma.jobPhoto.count({ where: { jobId } });
+  const form = await req.formData();
+  const kindRaw = String(form.get('kind') ?? 'COMPLETION').toUpperCase();
+  const kind = kindRaw === 'PROBLEM' ? PhotoKind.PROBLEM : PhotoKind.COMPLETION;
+
+  // Cap per kind so problem evidence doesn't crowd out completion photos.
+  const existing = await prisma.jobPhoto.count({ where: { jobId, kind } });
   if (existing >= MAX_PHOTOS_PER_JOB) {
     return NextResponse.json(
       { error: `Photo limit reached (${MAX_PHOTOS_PER_JOB}). Delete one to add another.` },
@@ -26,7 +32,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     );
   }
 
-  const form = await req.formData();
   const file = form.get('photo');
   if (!(file instanceof File)) {
     return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -52,7 +57,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   const photo = await prisma.jobPhoto.create({
-    data: { jobId, url: stored.url, uploadedByUserId: user.id },
+    data: { jobId, url: stored.url, uploadedByUserId: user.id, kind },
   });
 
   const count = existing + 1;
