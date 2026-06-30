@@ -55,3 +55,7 @@ DO $$ BEGIN
     ADD CONSTRAINT "JobChecklistCheck_itemId_fkey"
     FOREIGN KEY ("itemId") REFERENCES "PropertyChecklistItem"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- Match the RLS posture of the rest of the schema (Prisma bypasses RLS as owner).
+ALTER TABLE "PropertyChecklistItem" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "JobChecklistCheck" ENABLE ROW LEVEL SECURITY;

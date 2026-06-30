@@ -23,3 +23,6 @@ DO $$ BEGIN
     ADD CONSTRAINT "NotificationPreference_userId_fkey"
     FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- Match the RLS posture of the rest of the schema (Prisma bypasses RLS as owner).
+ALTER TABLE "NotificationPreference" ENABLE ROW LEVEL SECURITY;
