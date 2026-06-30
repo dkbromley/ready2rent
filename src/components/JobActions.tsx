@@ -3,8 +3,8 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { JobStatus } from '@prisma/client';
-import { CheckCircle2, AlertTriangle, Play, CalendarCheck, Loader2, XCircle } from 'lucide-react';
-import { updateJobStatus, saveJobNotes, manuallyCompleteJob, cancelJob } from '@/server/actions';
+import { CheckCircle2, AlertTriangle, Play, CalendarCheck, Loader2, XCircle, RotateCcw } from 'lucide-react';
+import { updateJobStatus, saveJobNotes, manuallyCompleteJob, cancelJob, reopenJob } from '@/server/actions';
 import { JOB_NEXT_STATUSES, JOB_STATUS_META } from '@/lib/status';
 import { Button, inputClass } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -68,11 +68,39 @@ export function JobStatusActions({
     });
   }
 
+  function reopen() {
+    startTransition(async () => {
+      await reopenJob(jobId, note || undefined);
+      setNote('');
+      router.refresh();
+    });
+  }
+
   if (isTerminal) {
     return (
-      <p className="text-sm text-navy-500">
-        This job is {JOB_STATUS_META[current].label.toLowerCase()} — no further actions.
-      </p>
+      <div className="space-y-3">
+        <p className="text-sm text-navy-500">
+          This job is {JOB_STATUS_META[current].label.toLowerCase()}.
+        </p>
+        <input
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Optional note for reopening…"
+          className={inputClass}
+        />
+        <button
+          disabled={pending}
+          onClick={reopen}
+          className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-medium text-navy-800 ring-1 ring-inset ring-navy-200 transition hover:bg-navy-50 disabled:opacity-60"
+        >
+          {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+          Reopen {current === JobStatus.COMPLETED ? '(undo complete)' : '(undo cancel)'}
+        </button>
+        <p className="text-xs text-navy-400">
+          Marked {JOB_STATUS_META[current].label.toLowerCase()} by accident? Reopening restores it to its
+          previous state and lets calendar sync manage it again.
+        </p>
+      </div>
     );
   }
 

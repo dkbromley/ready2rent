@@ -113,4 +113,12 @@ export const notify = {
       'A cleaner flagged a problem on this turnover.',
       jobId,
     ),
+  jobReopened: (jobId: string, propertyId: string) =>
+    emit(
+      propertyId,
+      NotificationType.JOB_CHANGED,
+      'Turnover reopened',
+      'A completed/canceled turnover was reopened and is active again.',
+      jobId,
+    ),
 };
