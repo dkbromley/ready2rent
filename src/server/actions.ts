@@ -257,6 +257,76 @@ export async function updateJobStatus(jobId: string, toStatus: JobStatus, note?:
   revalidatePath('/dashboard');
 }
 
+/**
+ * Manually mark a job complete from any state (host or cleaner). Sets the manual
+ * lock so a later sync won't reopen or re-date it, and notifies as a completion.
+ */
+export async function manuallyCompleteJob(jobId: string, note?: string) {
+  const user = await requireUser();
+  if (!(await canAccessJob(user, jobId))) throw new Error('Not authorized.');
+  const job = await prisma.turnoverJob.findUnique({ where: { id: jobId } });
+  if (!job) throw new Error('Job not found.');
+  if (job.status === JobStatus.COMPLETED) return;
+
+  await prisma.turnoverJob.update({
+    where: { id: jobId },
+    data: {
+      status: JobStatus.COMPLETED,
+      completedAt: new Date(),
+      manualStatusLock: true,
+      statusHistory: {
+        create: {
+          fromStatus: job.status,
+          toStatus: JobStatus.COMPLETED,
+          changedByUserId: user.id,
+          note: note?.trim() || 'Marked complete manually',
+        },
+      },
+    },
+  });
+
+  await notify.jobCompleted(jobId, job.propertyId).catch(() => undefined);
+  await notifyOwnerOfJob(jobId, 'completed').catch(() => undefined);
+
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath('/cleaner');
+  revalidatePath('/dashboard');
+}
+
+/**
+ * Cancel a scheduled job (host or cleaner). Locks it so the next sync won't
+ * revive it while the reservation is still live. Completed jobs are left intact.
+ */
+export async function cancelJob(jobId: string, note?: string) {
+  const user = await requireUser();
+  if (!(await canAccessJob(user, jobId))) throw new Error('Not authorized.');
+  const job = await prisma.turnoverJob.findUnique({ where: { id: jobId } });
+  if (!job) throw new Error('Job not found.');
+  if (job.status === JobStatus.CANCELED || job.status === JobStatus.COMPLETED) return;
+
+  await prisma.turnoverJob.update({
+    where: { id: jobId },
+    data: {
+      status: JobStatus.CANCELED,
+      manualStatusLock: true,
+      statusHistory: {
+        create: {
+          fromStatus: job.status,
+          toStatus: JobStatus.CANCELED,
+          changedByUserId: user.id,
+          note: note?.trim() || 'Canceled manually',
+        },
+      },
+    },
+  });
+
+  await notify.jobCanceled(jobId, job.propertyId).catch(() => undefined);
+
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath('/cleaner');
+  revalidatePath('/dashboard');
+}
+
 export async function deleteJobPhoto(photoId: string) {
   const user = await requireUser();
   const photo = await prisma.jobPhoto.findUnique({ where: { id: photoId } });

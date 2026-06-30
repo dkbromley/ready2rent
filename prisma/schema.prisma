@@ -348,6 +348,10 @@ model TurnoverJob {
 
   status   JobStatus   @default(NEEDS_SCHEDULING)
   priority JobPriority @default(NORMAL)
+  /// Set when a host/cleaner manually completes or cancels a job. Locks the job
+  /// against the sync's auto date-updates and CANCELED→reopen revival, so a
+  /// deliberate override isn't undone on the next feed sync.
+  manualStatusLock Boolean @default(false)
 
   ownerNotes   String?
   cleanerNotes String?
