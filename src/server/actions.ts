@@ -524,6 +524,89 @@ export async function toggleJobChecklistItem(jobId: string, itemId: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Inventory (supplies + linens, per property)
+// ---------------------------------------------------------------------------
+
+const inventorySchema = z.object({
+  category: z.enum(['SUPPLY', 'LINEN']).default('SUPPLY'),
+  name: z.string().trim().min(1, 'Name is required').max(120),
+  size: z.string().trim().max(60).optional().or(z.literal('')),
+  unit: z.string().trim().max(40).optional().or(z.literal('')),
+  quantity: z.coerce.number().int().min(0).max(100000).default(0),
+  parLevel: z.preprocess(
+    (v) => (v === '' || v == null ? undefined : v),
+    z.coerce.number().int().min(0).max(100000).optional(),
+  ),
+  notes: z.string().trim().max(500).optional().or(z.literal('')),
+});
+
+/** Host or assigned cleaner adds an inventory item to a property. */
+export async function addInventoryItem(propertyId: string, formData: FormData) {
+  const user = await requireUser();
+  if (!(await canAccessProperty(user, propertyId))) throw new Error('Not authorized.');
+  const parsed = inventorySchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) throw new Error(parsed.error.errors[0]?.message ?? 'Invalid item');
+  const d = parsed.data;
+  await prisma.inventoryItem.create({
+    data: {
+      propertyId,
+      category: d.category as 'SUPPLY' | 'LINEN',
+      name: d.name,
+      size: d.size || null,
+      unit: d.unit || null,
+      quantity: d.quantity,
+      parLevel: d.parLevel ?? null,
+      notes: d.notes || null,
+    },
+  });
+  revalidatePath(`/properties/${propertyId}`);
+}
+
+/** Edit an inventory item's fields. */
+export async function updateInventoryItem(itemId: string, formData: FormData) {
+  const user = await requireUser();
+  const item = await prisma.inventoryItem.findUnique({ where: { id: itemId } });
+  if (!item) throw new Error('Item not found.');
+  if (!(await canAccessProperty(user, item.propertyId))) throw new Error('Not authorized.');
+  const parsed = inventorySchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) throw new Error(parsed.error.errors[0]?.message ?? 'Invalid item');
+  const d = parsed.data;
+  await prisma.inventoryItem.update({
+    where: { id: itemId },
+    data: {
+      category: d.category as 'SUPPLY' | 'LINEN',
+      name: d.name,
+      size: d.size || null,
+      unit: d.unit || null,
+      quantity: d.quantity,
+      parLevel: d.parLevel ?? null,
+      notes: d.notes || null,
+    },
+  });
+  revalidatePath(`/properties/${item.propertyId}`);
+}
+
+/** Bump a single item's quantity up or down (clamped at 0) — the +/- steppers. */
+export async function adjustInventoryQuantity(itemId: string, delta: number) {
+  const user = await requireUser();
+  const item = await prisma.inventoryItem.findUnique({ where: { id: itemId } });
+  if (!item) throw new Error('Item not found.');
+  if (!(await canAccessProperty(user, item.propertyId))) throw new Error('Not authorized.');
+  const next = Math.max(0, Math.min(100000, item.quantity + delta));
+  await prisma.inventoryItem.update({ where: { id: itemId }, data: { quantity: next } });
+  revalidatePath(`/properties/${item.propertyId}`);
+}
+
+export async function deleteInventoryItem(itemId: string) {
+  const user = await requireUser();
+  const item = await prisma.inventoryItem.findUnique({ where: { id: itemId } });
+  if (!item) return;
+  if (!(await canAccessProperty(user, item.propertyId))) throw new Error('Not authorized.');
+  await prisma.inventoryItem.delete({ where: { id: itemId } });
+  revalidatePath(`/properties/${item.propertyId}`);
+}
+
+// ---------------------------------------------------------------------------
 // Problem reports
 // ---------------------------------------------------------------------------
 

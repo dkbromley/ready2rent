@@ -295,6 +295,7 @@ export async function getPropertyDetail(propertyId: string) {
       },
       checklistItems: { orderBy: { position: 'asc' } },
       invitations: { where: { status: 'PENDING' }, orderBy: { createdAt: 'desc' } },
+      inventoryItems: { orderBy: [{ category: 'asc' }, { name: 'asc' }] },
     },
   });
 }

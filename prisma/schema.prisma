@@ -304,6 +304,7 @@ model Property {
   messageLogs   MessageLog[]
   checklistItems PropertyChecklistItem[]
   invitations   Invitation[]
+  inventoryItems InventoryItem[]
 
   @@index([ownerOrganizationId])
   @@index([assignedCleanerOrganizationId])
@@ -517,6 +518,40 @@ model JobChecklistCheck {
 
   @@unique([jobId, itemId])
   @@index([jobId])
+}
+
+// ---------------------------------------------------------------------------
+// Inventory (cleaning supplies + linens, per property)
+// ---------------------------------------------------------------------------
+
+enum InventoryCategory {
+  SUPPLY
+  LINEN
+}
+
+/// Stock a property needs on hand: cleaning supplies (soap, paper) and linens
+/// (towels, sheets, pillowcases) tracked by size. Hosts and the assigned cleaner
+/// can both create and adjust items. `parLevel` marks the desired level; below it
+/// the item reads as low.
+model InventoryItem {
+  id         String            @id @default(cuid())
+  propertyId String
+  category   InventoryCategory @default(SUPPLY)
+  name       String
+  /// Linen size, e.g. "Queen", "King", "Bath", "Hand", "Standard". Null for supplies.
+  size       String?
+  /// Counting unit, e.g. "rolls", "bottles", "sets", "pcs".
+  unit       String?
+  quantity   Int               @default(0)
+  /// Desired on-hand level; quantity below this flags the item as low. Null = untracked.
+  parLevel   Int?
+  notes      String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, category])
 }
 
 // ---------------------------------------------------------------------------

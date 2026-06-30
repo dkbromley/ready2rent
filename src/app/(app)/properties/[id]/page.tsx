@@ -37,6 +37,7 @@ import {
 import { JobCard } from '@/components/JobCard';
 import { PropertyImageUpload } from '@/components/PropertyImageUpload';
 import { ChecklistEditor } from '@/components/ChecklistEditor';
+import { InventoryManager } from '@/components/InventoryManager';
 import { SubmitButton } from '@/components/SubmitButton';
 import { ReservationStatusBadge, SyncStatusBadge } from '@/components/StatusBadge';
 import { formatInTz, formatTimeOfDay12 } from '@/lib/datetime';
@@ -220,6 +221,29 @@ export default async function PropertyDetailPage({
               <ChecklistEditor
                 propertyId={property.id}
                 items={property.checklistItems.map((i) => ({ id: i.id, text: i.text }))}
+              />
+            </Card>
+          </section>
+
+          {/* Inventory — supplies + linens, editable by host and cleaner */}
+          <section>
+            <SectionTitle>Inventory</SectionTitle>
+            <Card>
+              <p className="mb-3 text-sm text-navy-500">
+                Track cleaning supplies and linens (by size). The host and cleaner can both add
+                items and adjust counts; items at or below their par level are flagged low.
+              </p>
+              <InventoryManager
+                propertyId={property.id}
+                items={property.inventoryItems.map((i) => ({
+                  id: i.id,
+                  category: i.category,
+                  name: i.name,
+                  size: i.size,
+                  unit: i.unit,
+                  quantity: i.quantity,
+                  parLevel: i.parLevel,
+                }))}
               />
             </Card>
           </section>
