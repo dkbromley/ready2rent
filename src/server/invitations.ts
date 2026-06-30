@@ -32,7 +32,7 @@ export async function sendInvitationEmail(invitationId: string): Promise<void> {
 
   const html = `
   <div style="font-family:ui-sans-serif,system-ui,sans-serif;max-width:520px;margin:auto;color:#1d2748">
-    <div style="padding:20px 0"><span style="font-size:18px;font-weight:700;color:#0d9488">Ready2Rent</span></div>
+    <div style="padding:20px 0"><span style="font-size:18px;font-weight:700;color:#138585">Ready2Rent</span></div>
     <p style="font-size:15px;line-height:1.5">
       ${escapeHtml(inviter)} invited you to join Ready2Rent as the <strong>${roleWord}</strong>${ctx}.
     </p>
@@ -40,7 +40,7 @@ export async function sendInvitationEmail(invitationId: string): Promise<void> {
       Ready2Rent keeps vacation-rental turnovers in sync — checkout to clean, without the texts.
     </p>
     <div style="padding:18px 0">
-      <a href="${link}" style="background:#0d9488;color:#fff;text-decoration:none;padding:11px 18px;border-radius:12px;font-weight:600;font-size:14px">Accept invitation</a>
+      <a href="${link}" style="background:#138585;color:#fff;text-decoration:none;padding:11px 18px;border-radius:12px;font-weight:600;font-size:14px">Accept invitation</a>
     </div>
     <p style="font-size:12px;color:#adc3dd">If you didn't expect this, you can ignore this email.</p>
   </div>`;

@@ -14,7 +14,7 @@ export const JOB_STATUS_META: Record<
   SCHEDULED: {
     label: 'Scheduled',
     dot: 'bg-status-scheduled',
-    chip: 'bg-sky-50 text-sky-700 ring-sky-600/20',
+    chip: 'bg-blue-50 text-blue-700 ring-blue-600/20',
   },
   IN_PROGRESS: {
     label: 'In progress',
