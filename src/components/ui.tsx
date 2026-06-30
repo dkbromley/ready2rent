@@ -18,16 +18,21 @@ export function SectionTitle({ children, action }: { children: React.ReactNode; 
 export function PageHeader({
   title,
   subtitle,
+  eyebrow,
   action,
 }: {
   title: string;
   subtitle?: string;
+  eyebrow?: string;
   action?: React.ReactNode;
 }) {
   return (
     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-navy-900">{title}</h1>
+        {eyebrow && (
+          <p className="mb-1 text-xs font-bold uppercase tracking-wider text-brand-600">{eyebrow}</p>
+        )}
+        <h1 className="text-3xl font-extrabold tracking-tight text-navy-900">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-navy-500">{subtitle}</p>}
       </div>
       {action}

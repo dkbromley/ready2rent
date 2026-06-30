@@ -23,10 +23,17 @@ export function JobCard({ job, compact = false }: { job: JobCardData; compact?: 
     <Link
       href={`/jobs/${job.id}`}
       className={cn(
-        'card block p-4 transition hover:shadow-card-hover',
+        'card relative block overflow-hidden p-4 pl-5 transition hover:shadow-card-hover',
         job.sameDayTurnover && 'ring-1 ring-status-problem/30',
       )}
     >
+      {/* Coastal accent bar — seafoam, or coral for same-day turnovers. */}
+      <span
+        className={cn(
+          'absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b',
+          job.sameDayTurnover ? 'from-coral-400 to-coral-600' : 'from-brand-400 to-brand-600',
+        )}
+      />
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate font-semibold text-navy-900">{job.property.name}</p>

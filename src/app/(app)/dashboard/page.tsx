@@ -20,6 +20,7 @@ export default async function DashboardPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Overview"
         title="Dashboard"
         subtitle="Your turnover operations at a glance."
         action={
