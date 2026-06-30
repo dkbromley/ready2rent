@@ -205,35 +205,20 @@ export default async function PropertyDetailPage({
             )}
           </section>
 
-          {/* Cleaning checklist (host-authored; cleaners tick it off per job) */}
+          {/* Cleaning checklist — hosts and the assigned cleaner can both edit it;
+              cleaners tick items off per job. */}
           <section>
             <SectionTitle>Cleaning checklist</SectionTitle>
-            {user.role === UserRole.CLEANER ? (
-              property.checklistItems.length === 0 ? (
-                <Card className="text-sm text-navy-500">The host hasn&apos;t added a checklist yet.</Card>
-              ) : (
-                <Card>
-                  <ol className="space-y-2">
-                    {property.checklistItems.map((item, i) => (
-                      <li key={item.id} className="flex gap-2 text-sm text-navy-700">
-                        <span className="text-xs font-semibold text-navy-400">{i + 1}.</span>
-                        {item.text}
-                      </li>
-                    ))}
-                  </ol>
-                </Card>
-              )
-            ) : (
-              <Card>
-                <p className="mb-3 text-sm text-navy-500">
-                  Define exactly how this property should be turned over. Cleaners tick these off on each job.
-                </p>
-                <ChecklistEditor
-                  propertyId={property.id}
-                  items={property.checklistItems.map((i) => ({ id: i.id, text: i.text }))}
-                />
-              </Card>
-            )}
+            <Card>
+              <p className="mb-3 text-sm text-navy-500">
+                Define exactly how this property should be turned over. The host and the cleaner can
+                both add steps; cleaners tick them off on each job.
+              </p>
+              <ChecklistEditor
+                propertyId={property.id}
+                items={property.checklistItems.map((i) => ({ id: i.id, text: i.text }))}
+              />
+            </Card>
           </section>
         </div>
 

@@ -291,9 +291,9 @@ export async function saveJobNotes(formData: FormData) {
 
 const checklistTextSchema = z.string().trim().min(1, 'Add some text').max(280);
 
-/** Host adds a checklist line to a property. New items go to the bottom. */
+/** Host or assigned cleaner adds a checklist line. New items go to the bottom. */
 export async function addChecklistItem(propertyId: string, formData: FormData) {
-  const user = await requireRole(UserRole.OWNER, UserRole.ADMIN);
+  const user = await requireUser();
   if (!(await canAccessProperty(user, propertyId))) throw new Error('Not authorized.');
   const parsed = checklistTextSchema.safeParse(formData.get('text'));
   if (!parsed.success) throw new Error(parsed.error.errors[0]?.message ?? 'Invalid item');
@@ -309,9 +309,9 @@ export async function addChecklistItem(propertyId: string, formData: FormData) {
   revalidatePath(`/properties/${propertyId}`);
 }
 
-/** Host edits the text of a checklist item. */
+/** Host or assigned cleaner edits the text of a checklist item. */
 export async function updateChecklistItem(itemId: string, formData: FormData) {
-  const user = await requireRole(UserRole.OWNER, UserRole.ADMIN);
+  const user = await requireUser();
   const item = await prisma.propertyChecklistItem.findUnique({ where: { id: itemId } });
   if (!item) throw new Error('Item not found.');
   if (!(await canAccessProperty(user, item.propertyId))) throw new Error('Not authorized.');
@@ -321,9 +321,9 @@ export async function updateChecklistItem(itemId: string, formData: FormData) {
   revalidatePath(`/properties/${item.propertyId}`);
 }
 
-/** Host deletes a checklist item. */
+/** Host or assigned cleaner deletes a checklist item. */
 export async function deleteChecklistItem(itemId: string) {
-  const user = await requireRole(UserRole.OWNER, UserRole.ADMIN);
+  const user = await requireUser();
   const item = await prisma.propertyChecklistItem.findUnique({ where: { id: itemId } });
   if (!item) return;
   if (!(await canAccessProperty(user, item.propertyId))) throw new Error('Not authorized.');
@@ -331,9 +331,9 @@ export async function deleteChecklistItem(itemId: string) {
   revalidatePath(`/properties/${item.propertyId}`);
 }
 
-/** Host reorders an item by swapping positions with its neighbor. */
+/** Host or assigned cleaner reorders an item by swapping with its neighbor. */
 export async function moveChecklistItem(itemId: string, dir: 'up' | 'down') {
-  const user = await requireRole(UserRole.OWNER, UserRole.ADMIN);
+  const user = await requireUser();
   const item = await prisma.propertyChecklistItem.findUnique({ where: { id: itemId } });
   if (!item) throw new Error('Item not found.');
   if (!(await canAccessProperty(user, item.propertyId))) throw new Error('Not authorized.');
