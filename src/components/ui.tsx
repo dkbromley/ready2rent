@@ -42,10 +42,11 @@ export function PageHeader({
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 const buttonStyles: Record<ButtonVariant, string> = {
-  primary: 'bg-brand-600 text-white hover:bg-brand-700 shadow-sm',
-  secondary: 'bg-white text-navy-800 ring-1 ring-inset ring-navy-200 hover:bg-navy-50',
-  ghost: 'text-navy-600 hover:bg-navy-50',
-  danger: 'bg-status-problem text-white hover:bg-red-700',
+  primary:
+    'bg-gradient-to-b from-brand-400 to-brand-600 text-white shadow-[0_8px_20px_-6px_rgba(20,184,166,0.55)] hover:from-brand-300 hover:to-brand-500 hover:-translate-y-px',
+  secondary: 'bg-white text-navy-800 ring-1 ring-inset ring-navy-200 hover:bg-navy-50 hover:-translate-y-px',
+  ghost: 'text-navy-600 hover:bg-brand-50 hover:text-brand-700',
+  danger: 'bg-status-problem text-white shadow-[0_8px_20px_-6px_rgba(207,84,48,0.55)] hover:bg-red-700',
 };
 
 export function Button({
@@ -57,7 +58,7 @@ export function Button({
   return (
     <button
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60',
+        'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition duration-150 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0',
         buttonStyles[variant],
         className,
       )}
@@ -83,7 +84,7 @@ export function LinkButton({
     <Link
       href={href}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition',
+        'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition duration-150',
         buttonStyles[variant],
         className,
       )}
@@ -130,11 +131,11 @@ export function StatCard({
 
 type Tone = 'neutral' | 'teal' | 'coral' | 'green' | 'amber';
 const TILE_ICON: Record<Tone, string> = {
-  neutral: 'bg-navy-50 text-navy-500',
-  teal: 'bg-brand-50 text-brand-700',
-  coral: 'bg-coral-50 text-coral-600',
-  green: 'bg-teal-50 text-status-completed',
-  amber: 'bg-amber-50 text-amber-700',
+  neutral: 'bg-navy-50 text-navy-500 ring-navy-600/10',
+  teal: 'bg-brand-50 text-brand-700 ring-brand-600/15',
+  coral: 'bg-coral-50 text-coral-600 ring-coral-600/15',
+  green: 'bg-teal-50 text-status-completed ring-teal-600/15',
+  amber: 'bg-amber-50 text-amber-700 ring-amber-600/15',
 };
 const TILE_VALUE: Record<Tone, string> = {
   neutral: 'text-navy-900',
@@ -159,10 +160,10 @@ export function StatTile({
   href?: string;
 }) {
   const inner = (
-    <div className="card h-full p-4 transition hover:shadow-card-hover">
-      <span className={cn('inline-flex rounded-xl p-2', TILE_ICON[tone])}>{icon}</span>
-      <p className="mt-3 text-xs font-medium text-navy-500">{label}</p>
-      <p className={cn('mt-0.5 text-2xl font-bold tracking-tight', TILE_VALUE[tone])}>{value}</p>
+    <div className="card h-full p-5 transition duration-150 hover:-translate-y-0.5 hover:shadow-card-hover">
+      <span className={cn('inline-flex rounded-xl p-2.5 ring-1 ring-inset', TILE_ICON[tone])}>{icon}</span>
+      <p className="mt-4 text-[11px] font-semibold uppercase tracking-wider text-navy-400">{label}</p>
+      <p className={cn('mt-1 text-3xl font-extrabold tracking-tight', TILE_VALUE[tone])}>{value}</p>
     </div>
   );
   return href ? <Link href={href} className="block h-full">{inner}</Link> : inner;
