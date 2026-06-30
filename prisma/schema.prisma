@@ -120,6 +120,7 @@ enum NotificationType {
   JOB_CHANGED
   JOB_COMPLETED
   JOB_CANCELED
+  JOB_PROBLEM
   RESERVATION_CHANGED
   RESERVATION_CANCELED
   SAME_DAY_TURNOVER
@@ -148,11 +149,29 @@ model User {
   statusChanges          JobStatusHistory[]
   uploadedPhotos         JobPhoto[]
   notifications          Notification[]
+  notificationPreference NotificationPreference?
   assignedProperties     Property[]              @relation("PropertyCleanerUser")
   createdProperties      Property[]              @relation("PropertyCreatedBy")
   serviceProviderProfile ServiceProviderProfile?
 
   @@index([role])
+}
+
+/// Per-user in-app notification opt-outs. A missing row = everything on (the
+/// default). Lets hosts mute categories so they aren't pinged on every event.
+model NotificationPreference {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  newJobs         Boolean  @default(true)
+  jobChanges      Boolean  @default(true)
+  jobCompleted    Boolean  @default(true)
+  jobCanceled     Boolean  @default(true)
+  sameDayTurnover Boolean  @default(true)
+  problems        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Organization {

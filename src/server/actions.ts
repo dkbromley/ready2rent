@@ -534,6 +534,27 @@ export async function markAllNotificationsRead() {
   revalidatePath('/notifications');
 }
 
+/** Save the current user's per-category notification opt-outs (checkbox form). */
+export async function updateNotificationPreferences(formData: FormData) {
+  const user = await requireUser();
+  // Unchecked checkboxes are absent from the form → false.
+  const on = (key: string) => formData.get(key) != null;
+  const data = {
+    newJobs: on('newJobs'),
+    jobChanges: on('jobChanges'),
+    jobCompleted: on('jobCompleted'),
+    jobCanceled: on('jobCanceled'),
+    sameDayTurnover: on('sameDayTurnover'),
+    problems: on('problems'),
+  };
+  await prisma.notificationPreference.upsert({
+    where: { userId: user.id },
+    create: { userId: user.id, ...data },
+    update: data,
+  });
+  revalidatePath('/settings/notifications');
+}
+
 // ---------------------------------------------------------------------------
 // Cleaner-led onboarding: a cleaner adds a property from the owner's iCal link
 // ---------------------------------------------------------------------------

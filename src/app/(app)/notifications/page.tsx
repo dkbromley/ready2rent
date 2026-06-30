@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Bell, CheckCheck } from 'lucide-react';
+import { Bell, CheckCheck, Settings } from 'lucide-react';
 import { requireUser } from '@/lib/rbac';
 import { prisma } from '@/lib/prisma';
 import { markAllNotificationsRead } from '@/server/actions';
@@ -22,11 +22,19 @@ export default async function NotificationsPage() {
         title="Notifications"
         subtitle="Job and reservation updates across your properties."
         action={
-          hasUnread ? (
-            <form action={markAllNotificationsRead}>
-              <Button type="submit" variant="secondary"><CheckCheck className="h-4 w-4" /> Mark all read</Button>
-            </form>
-          ) : undefined
+          <div className="flex items-center gap-2">
+            <Link
+              href="/settings/notifications"
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-navy-700 ring-1 ring-inset ring-navy-200 hover:bg-navy-50"
+            >
+              <Settings className="h-4 w-4" /> Preferences
+            </Link>
+            {hasUnread && (
+              <form action={markAllNotificationsRead}>
+                <Button type="submit" variant="secondary"><CheckCheck className="h-4 w-4" /> Mark all read</Button>
+              </form>
+            )}
+          </div>
         }
       />
 

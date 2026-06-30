@@ -26,6 +26,23 @@ async function recipientsForProperty(propertyId: string): Promise<string[]> {
   return [...ids];
 }
 
+/**
+ * Map each notification type to the user-preference flag that gates it. Types
+ * absent here are never muted (e.g. direct assignment). A user with no
+ * preference row receives everything (opt-out model).
+ */
+type PrefFlag = 'newJobs' | 'jobChanges' | 'jobCompleted' | 'jobCanceled' | 'sameDayTurnover' | 'problems';
+const TYPE_TO_PREF: Partial<Record<NotificationType, PrefFlag>> = {
+  JOB_CREATED: 'newJobs',
+  SAME_DAY_TURNOVER: 'sameDayTurnover',
+  JOB_CHANGED: 'jobChanges',
+  RESERVATION_CHANGED: 'jobChanges',
+  JOB_COMPLETED: 'jobCompleted',
+  JOB_CANCELED: 'jobCanceled',
+  RESERVATION_CANCELED: 'jobCanceled',
+  JOB_PROBLEM: 'problems',
+};
+
 async function emit(
   propertyId: string,
   type: NotificationType,
@@ -35,8 +52,21 @@ async function emit(
 ): Promise<void> {
   const userIds = await recipientsForProperty(propertyId);
   if (userIds.length === 0) return;
+
+  // Drop recipients who muted this category. Missing prefs row = opted in.
+  const prefFlag = TYPE_TO_PREF[type];
+  let recipients = userIds;
+  if (prefFlag) {
+    const prefs = await prisma.notificationPreference.findMany({
+      where: { userId: { in: userIds } },
+    });
+    const byUser = new Map(prefs.map((p) => [p.userId, p]));
+    recipients = userIds.filter((uid) => byUser.get(uid)?.[prefFlag] ?? true);
+  }
+  if (recipients.length === 0) return;
+
   await prisma.notification.createMany({
-    data: userIds.map((userId) => ({ userId, type, title, body, jobId, propertyId })),
+    data: recipients.map((userId) => ({ userId, type, title, body, jobId, propertyId })),
   });
 }
 
@@ -78,7 +108,7 @@ export const notify = {
   jobProblem: (jobId: string, propertyId: string) =>
     emit(
       propertyId,
-      NotificationType.JOB_CHANGED,
+      NotificationType.JOB_PROBLEM,
       'Turnover flagged: needs attention',
       'A cleaner flagged a problem on this turnover.',
       jobId,
