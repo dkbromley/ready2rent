@@ -2,26 +2,28 @@ import type { Config } from 'tailwindcss';
 
 /**
  * Ready2Rent design tokens.
- * Coastal-but-professional: deep navy chrome, teal/seafoam accent, sand neutrals,
- * and a clear semantic status palette used across job/reservation cards.
+ * Coastal & beachy: a seafoam (brand) primary with lighter ocean-blue (sky)
+ * support, warm sand neutrals, deep navy text/chrome, and a clear semantic
+ * status palette used across job/reservation cards.
  */
 const config: Config = {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
+        // Seafoam — the primary action color (buttons, links, active nav, focus).
         brand: {
-          50: '#eefcfb',
-          100: '#d4f6f4',
-          200: '#aeece9',
-          300: '#76dcd8',
-          400: '#38c2bf',
-          500: '#1ba6a4',
-          600: '#138585',
-          700: '#146a6b',
-          800: '#155456',
-          900: '#164648',
-          950: '#06282b',
+          50: '#effcf9',
+          100: '#cffaf0',
+          200: '#a3f0e3',
+          300: '#5eead4',
+          400: '#2dd4bf',
+          500: '#14b8a6',
+          600: '#0d9488',
+          700: '#0f766e',
+          800: '#115e57',
+          900: '#134e4a',
+          950: '#042f2c',
         },
         navy: {
           50: '#f3f6fb',
@@ -58,7 +60,7 @@ const config: Config = {
         // Semantic status palette (job + reservation states)
         status: {
           available: '#15803d',
-          scheduled: '#2563eb',
+          scheduled: '#0ea5e9',
           progress: '#7c3aed',
           completed: '#0f766e',
           problem: '#cf5430',
@@ -71,8 +73,9 @@ const config: Config = {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
-        card: '0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 16px rgba(16, 24, 40, 0.06)',
-        'card-hover': '0 2px 4px rgba(16, 24, 40, 0.06), 0 8px 28px rgba(16, 24, 40, 0.10)',
+        // Soft, teal-tinted card elevation for the coastal look.
+        card: '0 1px 2px rgba(6, 48, 47, 0.05), 0 10px 26px rgba(6, 48, 47, 0.08)',
+        'card-hover': '0 2px 6px rgba(6, 48, 47, 0.10), 0 18px 42px rgba(6, 48, 47, 0.14)',
       },
       borderRadius: {
         xl: '0.875rem',

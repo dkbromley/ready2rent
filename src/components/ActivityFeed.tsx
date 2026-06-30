@@ -10,7 +10,7 @@ const ICON: Record<JobStatus, { icon: React.ReactNode; tint: string }> = {
   COMPLETED: { icon: <CircleCheck className="h-4 w-4" />, tint: 'bg-teal-50 text-status-completed' },
   PROBLEM: { icon: <AlertTriangle className="h-4 w-4" />, tint: 'bg-coral-50 text-coral-600' },
   IN_PROGRESS: { icon: <Play className="h-4 w-4" />, tint: 'bg-violet-50 text-status-progress' },
-  SCHEDULED: { icon: <CalendarClock className="h-4 w-4" />, tint: 'bg-blue-50 text-status-scheduled' },
+  SCHEDULED: { icon: <CalendarClock className="h-4 w-4" />, tint: 'bg-sky-50 text-status-scheduled' },
   NEEDS_SCHEDULING: { icon: <Clock className="h-4 w-4" />, tint: 'bg-amber-50 text-amber-700' },
   CANCELED: { icon: <CalendarX className="h-4 w-4" />, tint: 'bg-navy-100 text-navy-500' },
 };
