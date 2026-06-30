@@ -408,6 +408,61 @@ export async function cancelJob(jobId: string, note?: string) {
   revalidatePath('/dashboard');
 }
 
+/**
+ * Reopen a job that was completed or canceled by mistake. Restores it to the
+ * status it held immediately before the terminal change (falling back to
+ * SCHEDULED when a cleaner is assigned, else NEEDS_SCHEDULING) and clears the
+ * manual lock + completedAt so the next calendar sync resumes managing it.
+ */
+export async function reopenJob(jobId: string, note?: string) {
+  const user = await requireUser();
+  if (!(await canAccessJob(user, jobId))) throw new Error('Not authorized.');
+  const job = await prisma.turnoverJob.findUnique({ where: { id: jobId } });
+  if (!job) throw new Error('Job not found.');
+  if (job.status !== JobStatus.COMPLETED && job.status !== JobStatus.CANCELED) return;
+
+  // The last history row's fromStatus is where the job was just before it was
+  // completed/canceled — the natural "undo" target.
+  const lastChange = await prisma.jobStatusHistory.findFirst({
+    where: { jobId },
+    orderBy: { createdAt: 'desc' },
+  });
+  const prior = lastChange?.fromStatus ?? null;
+  const isTerminal = (s: JobStatus | null) =>
+    s === JobStatus.COMPLETED || s === JobStatus.CANCELED || s == null;
+  const restoreTo = !isTerminal(prior)
+    ? (prior as JobStatus)
+    : job.assignedUserId
+      ? JobStatus.SCHEDULED
+      : JobStatus.NEEDS_SCHEDULING;
+
+  await prisma.turnoverJob.update({
+    where: { id: jobId },
+    data: {
+      status: restoreTo,
+      manualStatusLock: false,
+      completedAt: null,
+      // Ensure a reopened job reappears on dashboards even if the cleanup cron
+      // had already archived an old completed job.
+      archivedAt: null,
+      statusHistory: {
+        create: {
+          fromStatus: job.status,
+          toStatus: restoreTo,
+          changedByUserId: user.id,
+          note: note?.trim() || 'Reopened (status change reverted)',
+        },
+      },
+    },
+  });
+
+  await notify.jobReopened(jobId, job.propertyId).catch(() => undefined);
+
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath('/cleaner');
+  revalidatePath('/dashboard');
+}
+
 export async function deleteJobPhoto(photoId: string) {
   const user = await requireUser();
   const photo = await prisma.jobPhoto.findUnique({ where: { id: photoId } });
