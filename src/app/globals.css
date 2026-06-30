@@ -21,15 +21,6 @@ body {
     radial-gradient(820px 480px at -5% 0%, #e0f2fe 0%, transparent 48%), #fbf9f4;
 }
 
-/* Deep-ocean hero for marketing/auth surfaces: dark teal-navy with a seafoam
-   and sky glow. White text by default. */
-.ocean-hero {
-  background: radial-gradient(840px 460px at 82% -20%, rgba(45, 212, 191, 0.42), transparent 60%),
-    radial-gradient(560px 380px at 4% 120%, rgba(56, 189, 248, 0.26), transparent 60%),
-    linear-gradient(180deg, #06302f 0%, #0c3f3c 100%);
-  color: #fff;
-}
-
 .card {
   @apply rounded-2xl border border-sand-100 bg-white shadow-card;
 }
