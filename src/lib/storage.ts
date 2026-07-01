@@ -62,6 +62,10 @@ export function storePropertyImage(propertyId: string, bytes: Buffer, ext: strin
   return store(`property-images/${propertyId}`, bytes, ext, contentType);
 }
 
+export function storeReceipt(propertyId: string, bytes: Buffer, ext: string, contentType: string) {
+  return store(`receipts/${propertyId}`, bytes, ext, contentType);
+}
+
 /** Best-effort delete of a previously stored file, given its public URL. */
 export async function deleteStoredFile(url: string | null | undefined): Promise<void> {
   if (!url) return;

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
-import { CalendarPlatform, JobStatus, UserRole } from '@prisma/client';
+import { CalendarPlatform, ExpenseCategory, JobStatus, PaymentMethod, PaymentStatus, UserRole } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { encryptSecret, hashFeedUrl, normalizeFeedUrl } from '@/lib/crypto';
 import {
@@ -20,7 +20,7 @@ import { notify } from '@/server/notifications';
 import { notifyOwnerOfJob } from '@/server/owner-notify';
 import { applyInvitationAcceptance, sendInvitationEmail } from '@/server/invitations';
 import { detectPlatformFromUrl } from '@/lib/feeds';
-import { storePropertyImage, deleteStoredFile } from '@/lib/storage';
+import { storePropertyImage, storeReceipt, deleteStoredFile } from '@/lib/storage';
 import { MAX_IMAGE_BYTES, ALLOWED_IMAGE_TYPES } from '@/lib/limits';
 
 // ---------------------------------------------------------------------------
@@ -333,9 +333,13 @@ export async function updateJobStatus(jobId: string, toStatus: JobStatus, note?:
   if (toStatus === JobStatus.IN_PROGRESS) await notifyOwnerOfJob(jobId, 'started').catch(() => undefined);
   else if (toStatus === JobStatus.COMPLETED) await notifyOwnerOfJob(jobId, 'completed').catch(() => undefined);
 
+  // A completed clean auto-creates a cleaning payment due (host → cleaner).
+  if (toStatus === JobStatus.COMPLETED) await ensurePaymentForJob(jobId).catch(() => undefined);
+
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath('/cleaner');
   revalidatePath('/dashboard');
+  revalidatePath('/financials');
 }
 
 /**
@@ -368,10 +372,12 @@ export async function manuallyCompleteJob(jobId: string, note?: string) {
 
   await notify.jobCompleted(jobId, job.propertyId).catch(() => undefined);
   await notifyOwnerOfJob(jobId, 'completed').catch(() => undefined);
+  await ensurePaymentForJob(jobId).catch(() => undefined);
 
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath('/cleaner');
   revalidatePath('/dashboard');
+  revalidatePath('/financials');
 }
 
 /**
@@ -892,4 +898,180 @@ export async function removeProperty(propertyId: string) {
   revalidatePath('/cleaner/properties');
   revalidatePath('/cleaner');
   revalidatePath('/properties');
+}
+
+// ---------------------------------------------------------------------------
+// Financials (manual payment tracking + per-property expenses)
+// ---------------------------------------------------------------------------
+
+/** Auto-create a cleaning payment (status DUE) for a completed job, once. Uses
+ * the property's cleaning price; skipped silently if there's no price set or a
+ * payment already exists for the job. */
+async function ensurePaymentForJob(jobId: string): Promise<void> {
+  const existing = await prisma.payment.findUnique({ where: { jobId } });
+  if (existing) return;
+  const job = await prisma.turnoverJob.findUnique({
+    where: { id: jobId },
+    select: { id: true, propertyId: true, completedAt: true, property: { select: { cleaningPrice: true } } },
+  });
+  if (!job || job.property.cleaningPrice == null || job.property.cleaningPrice <= 0) return;
+  await prisma.payment.create({
+    data: {
+      propertyId: job.propertyId,
+      jobId: job.id,
+      amount: job.property.cleaningPrice,
+      status: PaymentStatus.DUE,
+      dueDate: job.completedAt ?? new Date(),
+    },
+  });
+}
+
+function parseDateInput(v: FormDataEntryValue | null): Date | undefined {
+  const s = String(v ?? '').trim();
+  if (!s) return undefined;
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? undefined : d;
+}
+
+const paymentSchema = z.object({
+  propertyId: z.string().min(1),
+  amount: z.coerce.number().int().min(0).max(1_000_000),
+  method: z.preprocess((v) => (v === '' || v == null ? undefined : v), z.nativeEnum(PaymentMethod).optional()),
+  status: z.nativeEnum(PaymentStatus).default(PaymentStatus.DUE),
+  reference: z.string().trim().max(200).optional().or(z.literal('')),
+  note: z.string().trim().max(500).optional().or(z.literal('')),
+});
+
+/** Manually record a payment (host or assigned cleaner) against a property. */
+export async function recordPayment(formData: FormData) {
+  const user = await requireUser();
+  const parsed = paymentSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) throw new Error(parsed.error.errors[0]?.message ?? 'Invalid payment');
+  const d = parsed.data;
+  if (!(await canAccessProperty(user, d.propertyId))) throw new Error('Not authorized.');
+
+  await prisma.payment.create({
+    data: {
+      propertyId: d.propertyId,
+      amount: d.amount,
+      method: d.method ?? null,
+      status: d.status,
+      dueDate: parseDateInput(formData.get('dueDate')) ?? null,
+      paidAt: d.status === PaymentStatus.PAID ? new Date() : null,
+      reference: d.reference?.trim() || null,
+      note: d.note?.trim() || null,
+      createdByUserId: user.id,
+    },
+  });
+  revalidatePath('/financials');
+  revalidatePath('/dashboard');
+}
+
+/** Mark a payment as paid (records method + reference + timestamp). */
+export async function markPaymentPaid(paymentId: string, formData: FormData) {
+  const user = await requireUser();
+  const payment = await prisma.payment.findUnique({ where: { id: paymentId }, select: { propertyId: true } });
+  if (!payment) throw new Error('Payment not found.');
+  if (!(await canAccessProperty(user, payment.propertyId))) throw new Error('Not authorized.');
+
+  const method = paymentSchema.shape.method.parse(formData.get('method') ?? undefined);
+  const reference = String(formData.get('reference') ?? '').trim();
+  await prisma.payment.update({
+    where: { id: paymentId },
+    data: {
+      status: PaymentStatus.PAID,
+      method: method ?? null,
+      reference: reference || null,
+      paidAt: new Date(),
+    },
+  });
+  revalidatePath('/financials');
+  revalidatePath('/dashboard');
+}
+
+/** Revert a payment back to Due (undo an accidental "paid"). */
+export async function markPaymentDue(paymentId: string) {
+  const user = await requireUser();
+  const payment = await prisma.payment.findUnique({ where: { id: paymentId }, select: { propertyId: true } });
+  if (!payment) throw new Error('Payment not found.');
+  if (!(await canAccessProperty(user, payment.propertyId))) throw new Error('Not authorized.');
+  await prisma.payment.update({ where: { id: paymentId }, data: { status: PaymentStatus.DUE, paidAt: null } });
+  revalidatePath('/financials');
+  revalidatePath('/dashboard');
+}
+
+export async function deletePayment(paymentId: string) {
+  const user = await requireUser();
+  const payment = await prisma.payment.findUnique({ where: { id: paymentId }, select: { propertyId: true } });
+  if (!payment) throw new Error('Payment not found.');
+  if (!(await canAccessProperty(user, payment.propertyId))) throw new Error('Not authorized.');
+  await prisma.payment.delete({ where: { id: paymentId } });
+  revalidatePath('/financials');
+  revalidatePath('/dashboard');
+}
+
+const RECEIPT_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'application/pdf',
+]);
+
+async function uploadReceipt(propertyId: string, formData: FormData): Promise<string | null> {
+  const file = formData.get('receipt');
+  if (!(file instanceof File) || file.size === 0) return null;
+  if (file.size > MAX_IMAGE_BYTES) throw new Error('Receipt is too large.');
+  if (file.type && !RECEIPT_TYPES.has(file.type)) throw new Error('Receipt must be an image or PDF.');
+  const ext = file.name.split('.').pop() || (file.type === 'application/pdf' ? 'pdf' : 'jpg');
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const stored = await storeReceipt(propertyId, bytes, ext, file.type || 'application/octet-stream').catch(() => null);
+  return stored?.url ?? null;
+}
+
+const expenseSchema = z.object({
+  propertyId: z.string().min(1),
+  amount: z.coerce.number().int().min(0).max(1_000_000),
+  category: z.nativeEnum(ExpenseCategory).default(ExpenseCategory.OTHER),
+  description: z.string().trim().min(1, 'Description is required').max(200),
+  vendor: z.string().trim().max(120).optional().or(z.literal('')),
+});
+
+/** Host or assigned cleaner logs a per-property expense (with optional receipt). */
+export async function addExpense(formData: FormData) {
+  const user = await requireUser();
+  const parsed = expenseSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) throw new Error(parsed.error.errors[0]?.message ?? 'Invalid expense');
+  const d = parsed.data;
+  if (!(await canAccessProperty(user, d.propertyId))) throw new Error('Not authorized.');
+
+  const receiptUrl = await uploadReceipt(d.propertyId, formData);
+  await prisma.expense.create({
+    data: {
+      propertyId: d.propertyId,
+      amount: d.amount,
+      category: d.category,
+      description: d.description,
+      vendor: d.vendor?.trim() || null,
+      incurredAt: parseDateInput(formData.get('incurredAt')) ?? new Date(),
+      receiptUrl,
+      createdByUserId: user.id,
+    },
+  });
+  revalidatePath('/financials');
+  revalidatePath('/dashboard');
+}
+
+export async function deleteExpense(expenseId: string) {
+  const user = await requireUser();
+  const expense = await prisma.expense.findUnique({
+    where: { id: expenseId },
+    select: { propertyId: true, receiptUrl: true },
+  });
+  if (!expense) throw new Error('Expense not found.');
+  if (!(await canAccessProperty(user, expense.propertyId))) throw new Error('Not authorized.');
+  await deleteStoredFile(expense.receiptUrl);
+  await prisma.expense.delete({ where: { id: expenseId } });
+  revalidatePath('/financials');
+  revalidatePath('/dashboard');
 }
