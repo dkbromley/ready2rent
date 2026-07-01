@@ -155,6 +155,8 @@ model User {
   serviceProviderProfile ServiceProviderProfile?
   invitesSent            Invitation[]            @relation("InvitesSent")
   invitesAccepted        Invitation[]            @relation("InvitesAccepted")
+  createdPayments        Payment[]               @relation("PaymentCreatedBy")
+  createdExpenses        Expense[]               @relation("ExpenseCreatedBy")
 
   @@index([role])
 }
@@ -305,6 +307,8 @@ model Property {
   checklistItems PropertyChecklistItem[]
   invitations   Invitation[]
   inventoryItems InventoryItem[]
+  payments       Payment[]
+  expenses       Expense[]
 
   @@index([ownerOrganizationId])
   @@index([assignedCleanerOrganizationId])
@@ -437,6 +441,7 @@ model TurnoverJob {
   photos          JobPhoto[]
   notifications   Notification[]
   checklistChecks JobChecklistCheck[]
+  payment         Payment?
 
   @@index([propertyId])
   @@index([assignedOrganizationId])
@@ -670,4 +675,82 @@ model ServiceProviderProfile {
 
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Financials — manual payment tracking + per-property expenses.
+// Amounts are whole dollars (Int), matching Property.cleaningPrice. Stripe and
+// other automated methods can be added to PaymentMethod later.
+// ---------------------------------------------------------------------------
+
+/// How a cleaning payment was (or will be) settled. P2P methods for now.
+enum PaymentMethod {
+  APPLE_PAY
+  VENMO
+  CASH_APP
+  ZELLE
+  CASH
+  OTHER
+}
+
+enum PaymentStatus {
+  DUE
+  PAID
+  CANCELED
+}
+
+enum ExpenseCategory {
+  SUPPLIES
+  REPAIRS
+  UTILITIES
+  CLEANING
+  FEES
+  OTHER
+}
+
+/// A cleaning payment owed by a host to a cleaner for a turnover. Auto-created
+/// (status DUE, amount = property cleaning price) when a job is completed, and
+/// also creatable/editable by hand. One payment per turnover job.
+model Payment {
+  id              String         @id @default(cuid())
+  propertyId      String
+  jobId           String?        @unique
+  amount          Int
+  method          PaymentMethod?
+  status          PaymentStatus  @default(DUE)
+  dueDate         DateTime?
+  paidAt          DateTime?
+  /// Free-text reference: Venmo handle, Zelle memo, confirmation code, etc.
+  reference       String?
+  note            String?
+  createdByUserId String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  property      Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  job           TurnoverJob? @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  createdByUser User?        @relation("PaymentCreatedBy", fields: [createdByUserId], references: [id])
+
+  @@index([propertyId, status])
+  @@index([status, dueDate])
+}
+
+/// A per-property expense with an optional uploaded receipt.
+model Expense {
+  id              String          @id @default(cuid())
+  propertyId      String
+  amount          Int
+  category        ExpenseCategory @default(OTHER)
+  description     String
+  vendor          String?
+  incurredAt      DateTime        @default(now())
+  receiptUrl      String?
+  createdByUserId String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  property      Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdByUser User?    @relation("ExpenseCreatedBy", fields: [createdByUserId], references: [id])
+
+  @@index([propertyId, incurredAt])
 }
