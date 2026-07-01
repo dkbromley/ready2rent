@@ -82,6 +82,12 @@ export function JobCalendar({ jobs }: { jobs: CalendarJob[] }) {
         : format(cursor, 'EEEE, MMMM d, yyyy');
 
   const openJob = (id: string) => router.push(`/jobs/${id}`);
+  // Tapping a day (esp. on phones, where the month grid is dense) drills into
+  // that day's tap-friendly agenda list.
+  const selectDay = (d: Date) => {
+    setCursor(d);
+    setView('day');
+  };
 
   return (
     <div>
@@ -109,13 +115,13 @@ export function JobCalendar({ jobs }: { jobs: CalendarJob[] }) {
           </button>
           <h2 className="ml-2 text-lg font-semibold text-navy-900">{title}</h2>
         </div>
-        <div className="inline-flex rounded-xl bg-navy-100 p-0.5">
+        <div className="flex w-full rounded-xl bg-navy-100 p-0.5 sm:inline-flex sm:w-auto">
           {(['month', 'week', 'day'] as View[]).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
               className={cn(
-                'rounded-lg px-3 py-1.5 text-sm font-medium capitalize transition',
+                'flex-1 rounded-lg px-3 py-2 text-sm font-medium capitalize transition sm:flex-none sm:py-1.5',
                 view === v ? 'bg-white text-navy-900 shadow-sm' : 'text-navy-500 hover:text-navy-700',
               )}
             >
@@ -125,7 +131,7 @@ export function JobCalendar({ jobs }: { jobs: CalendarJob[] }) {
         </div>
       </div>
 
-      {view === 'month' && <MonthView cursor={cursor} jobs={parsed} onOpen={openJob} />}
+      {view === 'month' && <MonthView cursor={cursor} jobs={parsed} onOpen={openJob} onSelectDay={selectDay} />}
       {view === 'week' && <WeekView cursor={cursor} jobs={parsed} onOpen={openJob} />}
       {view === 'day' && (
         <DayView
@@ -146,10 +152,12 @@ function MonthView({
   cursor,
   jobs,
   onOpen,
+  onSelectDay,
 }: {
   cursor: Date;
   jobs: ParsedJob[];
   onOpen: (id: string) => void;
+  onSelectDay: (d: Date) => void;
 }) {
   const monthStart = startOfMonth(cursor);
   const monthEnd = endOfMonth(cursor);
@@ -178,6 +186,7 @@ function MonthView({
           jobs={jobs}
           cursor={cursor}
           onOpen={onOpen}
+          onSelectDay={onSelectDay}
           isLastWeek={wi === weeks.length - 1}
         />
       ))}
@@ -190,12 +199,14 @@ function MonthWeekRow({
   jobs,
   cursor,
   onOpen,
+  onSelectDay,
   isLastWeek,
 }: {
   weekDays: Date[];
   jobs: ParsedJob[];
   cursor: Date;
   onOpen: (id: string) => void;
+  onSelectDay: (d: Date) => void;
   isLastWeek: boolean;
 }) {
   const weekStart = startOfDay(weekDays[0]);
@@ -246,10 +257,13 @@ function MonthWeekRow({
       {weekDays.map((day, i) => {
         const inMonth = isSameMonth(day, cursor);
         return (
-          <div
+          <button
             key={day.toISOString()}
+            type="button"
+            onClick={() => onSelectDay(day)}
+            aria-label={`View ${format(day, 'EEEE, MMMM d')}`}
             className={cn(
-              'min-h-[44px] border-r border-navy-50 p-1.5 last:border-r-0',
+              'min-h-[44px] border-r border-navy-50 p-1.5 text-left transition last:border-r-0 hover:bg-brand-50/60 active:bg-brand-50',
               !inMonth && 'bg-navy-50/40',
             )}
             style={{ gridColumn: i + 1, gridRow: 1 }}
@@ -266,7 +280,7 @@ function MonthWeekRow({
             >
               {format(day, 'd')}
             </span>
-          </div>
+          </button>
         );
       })}
 
