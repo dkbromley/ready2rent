@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { UserRole } from '@prisma/client';
-import { AlertTriangle, Home, Plus, Play, CircleCheck, Building2 } from 'lucide-react';
+import { AlertTriangle, Home, Plus, Play, CircleCheck, Building2, Wallet } from 'lucide-react';
 import { requireUser } from '@/lib/rbac';
 import { getOwnerDashboard } from '@/server/queries';
+import { getOutstandingForUser } from '@/server/financials';
+import { formatMoney } from '@/lib/money';
 import { PageHeader, StatTile, SectionTitle, EmptyState, LinkButton, Card } from '@/components/ui';
 import { JobCard } from '@/components/JobCard';
 import { WeeklyChart } from '@/components/WeeklyChart';
@@ -15,7 +17,10 @@ export default async function DashboardPage() {
   const user = await requireUser();
   if (user.role === UserRole.CLEANER) redirect('/cleaner');
 
-  const d = await getOwnerDashboard(user);
+  const [d, outstanding] = await Promise.all([
+    getOwnerDashboard(user),
+    getOutstandingForUser(user),
+  ]);
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'short',
@@ -55,11 +60,12 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
         <StatTile icon={<Building2 className="h-5 w-5" />} tone="teal" label="Properties" value={d.propertyCount} href="/properties" />
         <StatTile icon={<AlertTriangle className="h-5 w-5" />} tone="coral" label="Same-day" value={d.sameDayTurnovers.length} />
         <StatTile icon={<Play className="h-5 w-5" />} tone="neutral" label="In progress" value={d.inProgress} />
         <StatTile icon={<CircleCheck className="h-5 w-5" />} tone="green" label="Done today" value={d.completedToday} />
+        <StatTile icon={<Wallet className="h-5 w-5" />} tone="amber" label="Outstanding" value={formatMoney(outstanding)} href="/financials" />
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-3">

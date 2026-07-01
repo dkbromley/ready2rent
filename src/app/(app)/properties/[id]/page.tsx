@@ -17,6 +17,8 @@ import {
 import { CalendarPlatform, UserRole } from '@prisma/client';
 import { requireUser, canAccessProperty } from '@/lib/rbac';
 import { getPropertyDetail, listAssignableCleaners } from '@/server/queries';
+import { getPropertyFinancials } from '@/server/financials';
+import { formatMoney } from '@/lib/money';
 import {
   addCalendarFeed,
   assignCleaner,
@@ -56,6 +58,7 @@ export default async function PropertyDetailPage({
   if (!property) notFound();
 
   const { orgs, users } = await listAssignableCleaners();
+  const fin = await getPropertyFinancials(id);
   const tz = property.timezone;
   const activeFeeds = property.calendarFeeds.filter((f) => f.active);
   const currentAssignee = property.assignedCleanerUserId
@@ -151,6 +154,30 @@ export default async function PropertyDetailPage({
           <span className="inline-flex items-center gap-1 rounded-full bg-navy-50 px-2.5 py-1 text-navy-600"><DollarSign className="h-3.5 w-3.5 text-status-completed" /> {property.cleaningPrice}/clean</span>
         )}
       </div>
+
+      {/* Financials snapshot */}
+      <Card className="mt-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-500">Financials</h2>
+          <Link href="/financials" className="text-xs font-medium text-brand-700 hover:underline">
+            View all →
+          </Link>
+        </div>
+        <div className="mt-3 grid grid-cols-3 gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-navy-400">Outstanding</p>
+            <p className="mt-0.5 text-xl font-extrabold tracking-tight text-amber-700">{formatMoney(fin.due)}</p>
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-navy-400">Paid</p>
+            <p className="mt-0.5 text-xl font-extrabold tracking-tight text-status-completed">{formatMoney(fin.paid)}</p>
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-navy-400">Expenses</p>
+            <p className="mt-0.5 text-xl font-extrabold tracking-tight text-coral-600">{formatMoney(fin.expenses)}</p>
+          </div>
+        </div>
+      </Card>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-3">
         <div className="space-y-8 lg:col-span-2">

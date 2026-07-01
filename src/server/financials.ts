@@ -1,4 +1,4 @@
-import { Prisma, UserRole } from '@prisma/client';
+import { Prisma, PaymentStatus, UserRole } from '@prisma/client';
 import { startOfMonth } from 'date-fns';
 import { prisma } from '@/lib/prisma';
 import { getUserOrgIds, type SessionUser } from '@/lib/rbac';
@@ -100,5 +100,36 @@ export async function getFinancials(user: SessionUser): Promise<FinancialsData> 
     expenses,
     summary: { outstanding, paidThisMonth, expensesThisMonth },
     perProperty,
+  };
+}
+
+/** Total outstanding (status DUE) across a user's accessible properties. For the
+ * dashboard summary tile. */
+export async function getOutstandingForUser(user: SessionUser): Promise<number> {
+  const where = await accessiblePropertyWhere(user);
+  const props = await prisma.property.findMany({ where, select: { id: true } });
+  const ids = props.map((p) => p.id);
+  if (!ids.length) return 0;
+  const agg = await prisma.payment.aggregate({
+    _sum: { amount: true },
+    where: { propertyId: { in: ids }, status: PaymentStatus.DUE },
+  });
+  return agg._sum.amount ?? 0;
+}
+
+/** Due / paid / expense totals for a single property (property detail card).
+ * Access is gated by the caller. */
+export async function getPropertyFinancials(
+  propertyId: string,
+): Promise<{ due: number; paid: number; expenses: number }> {
+  const [dueAgg, paidAgg, expAgg] = await Promise.all([
+    prisma.payment.aggregate({ _sum: { amount: true }, where: { propertyId, status: PaymentStatus.DUE } }),
+    prisma.payment.aggregate({ _sum: { amount: true }, where: { propertyId, status: PaymentStatus.PAID } }),
+    prisma.expense.aggregate({ _sum: { amount: true }, where: { propertyId } }),
+  ]);
+  return {
+    due: dueAgg._sum.amount ?? 0,
+    paid: paidAgg._sum.amount ?? 0,
+    expenses: expAgg._sum.amount ?? 0,
   };
 }
