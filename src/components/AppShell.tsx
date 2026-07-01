@@ -105,7 +105,9 @@ export function AppShell({
         {/* Sidebar — desktop static, mobile drawer (opened via "More"). */}
         <aside
           className={cn(
-            'fixed inset-y-0 left-0 z-40 w-60 transform border-r border-sand-200 bg-white/70 pt-4 backdrop-blur transition-transform lg:static lg:z-0 lg:translate-x-0 lg:pt-0',
+            // Solid panel as a mobile overlay drawer; translucent+blurred only
+            // on desktop where it sits statically over the app background.
+            'fixed inset-y-0 left-0 z-40 w-60 transform border-r border-sand-200 bg-white pt-4 backdrop-blur transition-transform lg:static lg:z-0 lg:translate-x-0 lg:bg-white/70 lg:pt-0',
             drawerOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           )}
         >
