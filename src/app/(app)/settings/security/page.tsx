@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { requireUser } from '@/lib/rbac';
 import { PageHeader, Card } from '@/components/ui';
 import { ChangePasswordForm } from '@/components/ChangePasswordForm';
+import { DeleteAccountForm } from '@/components/DeleteAccountForm';
 
 export const metadata = { title: 'Account & security' };
 
@@ -20,8 +21,16 @@ export default async function SecuritySettingsPage() {
         subtitle={user.email ?? undefined}
       />
       <Card>
+        <h2 className="mb-3 text-sm font-semibold text-navy-800">Change password</h2>
         <ChangePasswordForm />
       </Card>
+
+      <div className="mt-8 rounded-2xl border border-coral-300/60 bg-surface p-5 shadow-card">
+        <h2 className="text-sm font-semibold text-coral-600 dark:text-coral-300">Danger zone</h2>
+        <div className="mt-3">
+          <DeleteAccountForm email={user.email ?? ''} />
+        </div>
+      </div>
     </div>
   );
 }
