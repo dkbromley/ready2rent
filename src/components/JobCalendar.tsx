@@ -122,7 +122,7 @@ export function JobCalendar({ jobs }: { jobs: CalendarJob[] }) {
               onClick={() => setView(v)}
               className={cn(
                 'flex-1 rounded-lg px-3 py-2 text-sm font-medium capitalize transition sm:flex-none sm:py-1.5',
-                view === v ? 'bg-white text-navy-900 shadow-sm' : 'text-navy-500 hover:text-navy-700',
+                view === v ? 'bg-surface text-navy-900 shadow-sm' : 'text-navy-500 hover:text-navy-700',
               )}
             >
               {v}
@@ -171,7 +171,7 @@ function MonthView({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-navy-100 bg-white shadow-card">
+    <div className="overflow-hidden rounded-2xl border border-navy-100 bg-surface shadow-card">
       <div className="grid grid-cols-7 border-b border-navy-100 bg-navy-50 text-center text-xs font-semibold uppercase tracking-wide text-navy-500">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
           <div key={d} className="py-2">
@@ -352,7 +352,7 @@ function WeekView({
   });
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-navy-100 bg-white shadow-card">
+    <div className="overflow-hidden rounded-2xl border border-navy-100 bg-surface shadow-card">
       {/* Header */}
       <div className="grid grid-cols-7 border-b border-navy-100 bg-navy-50">
         {days.map((day) => (
@@ -447,7 +447,7 @@ function DayView({
 }) {
   if (jobs.length === 0) {
     return (
-      <div className="rounded-2xl border border-navy-100 bg-white p-10 text-center text-sm text-navy-500 shadow-card">
+      <div className="rounded-2xl border border-navy-100 bg-surface p-10 text-center text-sm text-navy-500 shadow-card">
         No turnovers on {format(day, 'EEEE, MMM d')}.
       </div>
     );

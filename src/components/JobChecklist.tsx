@@ -79,7 +79,7 @@ export function JobChecklist({
                   'flex h-5 w-5 shrink-0 items-center justify-center rounded-md ring-1 ring-inset transition',
                   item.checked
                     ? 'bg-status-completed text-white ring-status-completed'
-                    : 'bg-white ring-navy-300',
+                    : 'bg-surface ring-navy-300',
                 )}
               >
                 {item.checked && <Check className="h-3.5 w-3.5" />}

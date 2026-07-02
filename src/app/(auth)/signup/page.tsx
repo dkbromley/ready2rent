@@ -109,7 +109,7 @@ function RoleCard({
         'flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition',
         active
           ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500'
-          : 'border-navy-200 bg-white hover:border-navy-300',
+          : 'border-navy-200 bg-surface hover:border-navy-300',
       )}
     >
       <span className={cn('rounded-lg p-1.5', active ? 'bg-brand-600 text-white' : 'bg-navy-100 text-navy-600')}>
