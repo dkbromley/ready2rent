@@ -14,7 +14,7 @@ import { formatInTz } from '@/lib/datetime';
 type Kind = 'started' | 'completed' | 'problem';
 
 function appBase(): string {
-  return process.env.AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://ready2rent.netlify.app';
+  return process.env.AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://ready2rent.io';
 }
 
 export async function notifyOwnerOfJob(jobId: string, kind: Kind): Promise<void> {
