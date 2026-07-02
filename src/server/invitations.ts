@@ -10,7 +10,7 @@ import { sendEmail } from '@/server/email';
  */
 
 function appBase(): string {
-  return process.env.AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://ready2rent.netlify.app';
+  return process.env.AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://ready2rent.io';
 }
 
 function escapeHtml(s: string): string {

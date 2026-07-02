@@ -56,16 +56,16 @@ async function upsertUser(
 async function main() {
   console.log('Seeding Ready2Rent demo data…');
 
-  await upsertUser('admin@turnready.app', 'Platform Admin', UserRole.ADMIN, 'Ready2Rent Admin', OrganizationType.ADMIN);
+  await upsertUser('admin@ready2rent.io', 'Platform Admin', UserRole.ADMIN, 'Ready2Rent Admin', OrganizationType.ADMIN);
   const { org: ownerOrg } = await upsertUser(
-    'owner@turnready.app',
+    'owner@ready2rent.io',
     'Olivia Owner',
     UserRole.OWNER,
     'Coastal Stays',
     OrganizationType.OWNER,
   );
   const { user: cleaner } = await upsertUser(
-    'cleaner@turnready.app',
+    'cleaner@ready2rent.io',
     'Casey Cleaner',
     UserRole.CLEANER,
     'Sparkle Turnovers',
@@ -158,9 +158,9 @@ async function main() {
   console.log('Jobs generated:', summary);
 
   console.log('\nDemo accounts (password: the SEED_PASSWORD you provided):');
-  console.log('  Owner   -> owner@turnready.app');
-  console.log('  Cleaner -> cleaner@turnready.app');
-  console.log('  Admin   -> admin@turnready.app');
+  console.log('  Owner   -> owner@ready2rent.io');
+  console.log('  Cleaner -> cleaner@ready2rent.io');
+  console.log('  Admin   -> admin@ready2rent.io');
   console.log('Done.');
 }
 

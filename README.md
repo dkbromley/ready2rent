@@ -120,9 +120,9 @@ seed refuses to run against `NODE_ENV=production` unless `ALLOW_PROD_SEED=true`)
 
 | Role | Email |
 |---|---|
-| Host / Owner | `owner@turnready.app` |
-| Cleaner | `cleaner@turnready.app` |
-| Admin | `admin@turnready.app` |
+| Host / Owner | `owner@ready2rent.io` |
+| Cleaner | `cleaner@ready2rent.io` |
+| Admin | `admin@ready2rent.io` |
 
 > These are development fixtures. Do not seed them into a production database.
 
