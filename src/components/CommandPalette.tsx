@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, CornerDownLeft, ArrowRight, Plus, Moon, Sun } from 'lucide-react';
+import { Search, CornerDownLeft, ArrowRight, Plus, Moon, Sun, X } from 'lucide-react';
 import { applyTheme, currentTheme } from '@/components/ThemeToggle';
 
 export interface PaletteItem {
@@ -114,9 +114,6 @@ export function CommandPalette({ items, canAddProperty }: { items: PaletteItem[]
     };
   }, []);
 
-  // Expose a tiny helper for the trigger button (declared as a module const
-  // below is simpler, but keeping it here avoids export churn).
-
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 0);
   }, [open]);
@@ -161,9 +158,13 @@ export function CommandPalette({ items, canAddProperty }: { items: PaletteItem[]
             placeholder="Search or jump to…"
             className="w-full bg-transparent py-3.5 text-sm text-navy-900 placeholder:text-navy-400 focus:outline-none"
           />
-          <kbd className="hidden shrink-0 rounded border border-sand-200 px-1.5 py-0.5 text-[10px] font-medium text-navy-400 sm:block">
-            ESC
-          </kbd>
+          <button
+            onClick={close}
+            aria-label="Close"
+            className="shrink-0 rounded-lg p-1.5 text-navy-400 transition hover:bg-sand-100 hover:text-navy-700"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         <div ref={listRef} className="max-h-[52vh] overflow-y-auto p-2">

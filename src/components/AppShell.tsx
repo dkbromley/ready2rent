@@ -84,13 +84,12 @@ export function AppShell({
           <div className="flex items-center gap-2">
             <button
               onClick={openCommandPalette}
-              title="Search & jump (⌘K)"
-              aria-label="Open command palette"
+              title="Search & jump"
+              aria-label="Search"
               className="hidden items-center gap-2 rounded-xl border border-sand-200 px-3 py-1.5 text-sm text-navy-400 transition hover:border-brand-300 hover:text-navy-600 sm:flex"
             >
               <Search className="h-4 w-4" />
               <span>Search…</span>
-              <kbd className="ml-1 rounded border border-sand-200 px-1.5 py-0.5 text-[10px] font-medium">⌘K</kbd>
             </button>
             <button
               onClick={openCommandPalette}
