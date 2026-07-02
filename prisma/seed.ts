@@ -13,7 +13,18 @@ import { regeneratePropertyJobs } from '../src/server/sync/job-generator';
 
 const prisma = new PrismaClient();
 const TZ = 'America/New_York';
-const PASSWORD = 'password123';
+
+// Safety guards: this script creates demo accounts and must never run against a
+// production database or with a weak/default password. Both are opt-in and
+// explicit — there is no baked-in default.
+if (process.env.NODE_ENV === 'production' && process.env.ALLOW_PROD_SEED !== 'true') {
+  throw new Error('Refusing to seed: NODE_ENV=production. Set ALLOW_PROD_SEED=true only if you really mean it.');
+}
+const seedPassword = process.env.SEED_PASSWORD;
+if (!seedPassword || seedPassword.length < 12) {
+  throw new Error('Set SEED_PASSWORD (12+ chars) before seeding — there is no default password.');
+}
+const PASSWORD: string = seedPassword;
 
 async function upsertUser(
   email: string,
@@ -146,7 +157,7 @@ async function main() {
   const summary = await regeneratePropertyJobs(property.id);
   console.log('Jobs generated:', summary);
 
-  console.log('\nDemo accounts (password: %s):', PASSWORD);
+  console.log('\nDemo accounts (password: the SEED_PASSWORD you provided):');
   console.log('  Owner   -> owner@turnready.app');
   console.log('  Cleaner -> cleaner@turnready.app');
   console.log('  Admin   -> admin@turnready.app');
