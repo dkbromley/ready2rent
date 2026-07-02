@@ -81,7 +81,7 @@ export function JobPhotos({
             <button
               onClick={() => inputRef.current?.click()}
               disabled={uploading || atLimit}
-              className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-1.5 text-sm font-medium text-navy-800 ring-1 ring-inset ring-navy-200 transition hover:bg-navy-50 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-surface px-3 py-1.5 text-sm font-medium text-navy-800 ring-1 ring-inset ring-navy-200 transition hover:bg-navy-50 disabled:opacity-50"
             >
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
               {atLimit ? 'Limit reached' : uploading ? 'Uploading…' : 'Add photo'}

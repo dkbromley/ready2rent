@@ -127,7 +127,7 @@ export function FinancialsManager({ role, properties, payments, expenses, summar
               'inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition',
               openForm === 'payment'
                 ? 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-600/20'
-                : 'bg-white text-navy-800 ring-1 ring-inset ring-navy-200 hover:bg-navy-50',
+                : 'bg-surface text-navy-800 ring-1 ring-inset ring-navy-200 hover:bg-navy-50',
             )}
           >
             <Plus className="h-4 w-4" /> Record payment
@@ -138,7 +138,7 @@ export function FinancialsManager({ role, properties, payments, expenses, summar
               'inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition',
               openForm === 'expense'
                 ? 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-600/20'
-                : 'bg-white text-navy-800 ring-1 ring-inset ring-navy-200 hover:bg-navy-50',
+                : 'bg-surface text-navy-800 ring-1 ring-inset ring-navy-200 hover:bg-navy-50',
             )}
           >
             <Receipt className="h-4 w-4" /> Add expense

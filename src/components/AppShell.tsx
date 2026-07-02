@@ -18,10 +18,13 @@ import {
   Wallet,
   LogOut,
   MoreHorizontal,
+  Search,
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { signOutAction } from '@/app/(app)/auth-actions';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { CommandPalette, openCommandPalette } from '@/components/CommandPalette';
 
 interface NavItem {
   href: string;
@@ -73,7 +76,7 @@ export function AppShell({
 
   return (
     <div className="app-bg min-h-screen">
-      <header className="sticky top-0 z-30 border-b border-sand-200 bg-white/80 backdrop-blur-md">
+      <header className="sticky top-0 z-30 border-b border-sand-200 bg-surface/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <Link href="/dashboard" className="inline-flex items-center gap-2 text-base font-extrabold tracking-tight text-navy-900">
             <span className="grid h-7 w-7 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-[0_4px_12px_-2px_rgba(20,184,166,0.5)]">
@@ -82,6 +85,25 @@ export function AppShell({
             Ready2Rent
           </Link>
           <div className="flex items-center gap-2">
+            <button
+              onClick={openCommandPalette}
+              title="Search & jump (⌘K)"
+              aria-label="Open command palette"
+              className="hidden items-center gap-2 rounded-xl border border-sand-200 px-3 py-1.5 text-sm text-navy-400 transition hover:border-brand-300 hover:text-navy-600 sm:flex"
+            >
+              <Search className="h-4 w-4" />
+              <span>Search…</span>
+              <kbd className="ml-1 rounded border border-sand-200 px-1.5 py-0.5 text-[10px] font-medium">⌘K</kbd>
+            </button>
+            <button
+              onClick={openCommandPalette}
+              title="Search & jump"
+              aria-label="Open command palette"
+              className="rounded-lg p-2 text-navy-600 hover:bg-navy-50 sm:hidden"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+            <ThemeToggle />
             <Link href="/notifications" className="relative rounded-lg p-2 text-navy-600 hover:bg-navy-50">
               <Bell className="h-5 w-5" />
               {unread > 0 && (
@@ -109,7 +131,7 @@ export function AppShell({
           className={cn(
             // Solid panel as a mobile overlay drawer; translucent+blurred only
             // on desktop where it sits statically over the app background.
-            'fixed inset-y-0 left-0 z-40 w-60 transform border-r border-sand-200 bg-white pt-4 backdrop-blur transition-transform lg:static lg:z-0 lg:translate-x-0 lg:bg-white/70 lg:pt-0',
+            'fixed inset-y-0 left-0 z-40 w-60 transform border-r border-sand-200 bg-surface pt-4 backdrop-blur transition-transform lg:static lg:z-0 lg:translate-x-0 lg:bg-surface/70 lg:pt-0',
             drawerOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           )}
         >
@@ -149,7 +171,7 @@ export function AppShell({
       </div>
 
       {/* Mobile bottom tab bar. */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-navy-100 bg-white/95 backdrop-blur lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-sand-200 bg-surface/95 backdrop-blur lg:hidden">
         <div className="mx-auto flex max-w-md items-stretch justify-around px-2 py-1.5">
           {primary.map((item) => {
             const active = item.href === activeHref;
@@ -176,6 +198,11 @@ export function AppShell({
           </button>
         </div>
       </nav>
+
+      <CommandPalette
+        items={items.map((i) => ({ label: i.label, href: i.href }))}
+        canAddProperty={role === UserRole.OWNER || role === UserRole.ADMIN}
+      />
     </div>
   );
 }

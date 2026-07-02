@@ -155,7 +155,7 @@ function Group({
                   aria-label="Delete item"
                   disabled={pending}
                   onClick={() => startTransition(async () => { await deleteInventoryItem(item.id); onRefresh(); })}
-                  className="ml-1 rounded-lg p-1.5 text-navy-400 transition hover:bg-white hover:text-status-problem disabled:opacity-40"
+                  className="ml-1 rounded-lg p-1.5 text-navy-400 transition hover:bg-sand-100 hover:text-status-problem disabled:opacity-40"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -185,7 +185,7 @@ function Stepper({
       aria-label={label}
       onClick={onClick}
       disabled={disabled}
-      className="rounded-lg bg-white p-1.5 text-navy-600 ring-1 ring-inset ring-navy-200 transition hover:bg-navy-50 disabled:opacity-40"
+      className="rounded-lg bg-surface p-1.5 text-navy-600 ring-1 ring-inset ring-navy-200 transition hover:bg-navy-50 disabled:opacity-40"
     >
       {children}
     </button>

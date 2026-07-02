@@ -91,7 +91,7 @@ export function JobStatusActions({
         <button
           disabled={pending}
           onClick={reopen}
-          className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-medium text-navy-800 ring-1 ring-inset ring-navy-200 transition hover:bg-navy-50 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl bg-surface px-4 py-2 text-sm font-medium text-navy-800 ring-1 ring-inset ring-navy-200 transition hover:bg-navy-50 disabled:opacity-60"
         >
           {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
           Reopen {current === JobStatus.COMPLETED ? '(undo complete)' : '(undo cancel)'}
@@ -126,7 +126,7 @@ export function JobStatusActions({
                 'inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition disabled:opacity-60',
                 success && 'bg-status-completed text-white hover:opacity-90',
                 danger && 'bg-status-problem text-white hover:opacity-90',
-                !success && !danger && 'bg-white text-navy-800 ring-1 ring-inset ring-navy-200 hover:bg-navy-50',
+                !success && !danger && 'bg-surface text-navy-800 ring-1 ring-inset ring-navy-200 hover:bg-navy-50',
               )}
             >
               {isThisPending ? <Loader2 className="h-4 w-4 animate-spin" /> : STATUS_ICON[to]}

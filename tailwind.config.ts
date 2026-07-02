@@ -5,8 +5,15 @@ import type { Config } from 'tailwindcss';
  * Coastal & beachy: a seafoam (brand) primary with lighter ocean-blue (sky)
  * support, warm sand neutrals, deep navy text/chrome, and a clear semantic
  * status palette used across job/reservation cards.
+ *
+ * Dark mode: `navy`, `sand`, and `surface` resolve to CSS variables defined in
+ * globals.css and flipped under `.dark`, so the whole app retheme happens at
+ * the token layer — pages keep using text-navy-600 / bg-sand-50 / bg-surface
+ * and get a correct dark rendering for free. Accent scales (brand/coral/
+ * status) are constant across modes.
  */
 const config: Config = {
+  darkMode: 'class',
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
@@ -26,24 +33,27 @@ const config: Config = {
           950: '#042f2c',
         },
         navy: {
-          50: '#f3f6fb',
-          100: '#e4eaf4',
-          200: '#cfdbeb',
-          300: '#adc3dd',
-          400: '#85a3ca',
-          500: '#6685bb',
-          600: '#526dac',
-          700: '#475c9d',
-          800: '#3e4d81',
-          900: '#1d2748',
-          950: '#121831',
+          50: 'rgb(var(--navy-50) / <alpha-value>)',
+          100: 'rgb(var(--navy-100) / <alpha-value>)',
+          200: 'rgb(var(--navy-200) / <alpha-value>)',
+          300: 'rgb(var(--navy-300) / <alpha-value>)',
+          400: 'rgb(var(--navy-400) / <alpha-value>)',
+          500: 'rgb(var(--navy-500) / <alpha-value>)',
+          600: 'rgb(var(--navy-600) / <alpha-value>)',
+          700: 'rgb(var(--navy-700) / <alpha-value>)',
+          800: 'rgb(var(--navy-800) / <alpha-value>)',
+          900: 'rgb(var(--navy-900) / <alpha-value>)',
+          950: 'rgb(var(--navy-950) / <alpha-value>)',
         },
         sand: {
-          50: '#fbf9f4',
-          100: '#f4efe2',
-          200: '#e8dcc4',
-          300: '#d9c39d',
+          50: 'rgb(var(--sand-50) / <alpha-value>)',
+          100: 'rgb(var(--sand-100) / <alpha-value>)',
+          200: 'rgb(var(--sand-200) / <alpha-value>)',
+          300: 'rgb(var(--sand-300) / <alpha-value>)',
         },
+        // Card / input / chrome background. White in light mode, elevated deep
+        // ocean in dark. Use instead of bg-white for app surfaces.
+        surface: 'rgb(var(--surface) / <alpha-value>)',
         // Coral — reserved for urgency: same-day turnovers, problems, alerts.
         coral: {
           50: '#fbeee9',

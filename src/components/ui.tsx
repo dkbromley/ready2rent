@@ -44,7 +44,7 @@ type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 const buttonStyles: Record<ButtonVariant, string> = {
   primary:
     'bg-gradient-to-b from-brand-400 to-brand-600 text-white shadow-[0_8px_20px_-6px_rgba(20,184,166,0.55)] hover:from-brand-300 hover:to-brand-500 hover:-translate-y-px',
-  secondary: 'bg-white text-navy-800 ring-1 ring-inset ring-navy-200 hover:bg-navy-50 hover:-translate-y-px',
+  secondary: 'bg-surface text-navy-800 ring-1 ring-inset ring-navy-200 hover:bg-navy-50 hover:-translate-y-px',
   ghost: 'text-navy-600 hover:bg-brand-50 hover:text-brand-700',
   danger: 'bg-status-problem text-white shadow-[0_8px_20px_-6px_rgba(207,84,48,0.55)] hover:bg-red-700',
 };
@@ -206,4 +206,4 @@ export function Field({
 }
 
 export const inputClass =
-  'w-full rounded-xl border-0 bg-white px-3 py-2 text-sm text-navy-900 shadow-sm ring-1 ring-inset ring-navy-200 placeholder:text-navy-300 focus:ring-2 focus:ring-inset focus:ring-brand-500';
+  'w-full rounded-xl border-0 bg-surface px-3 py-2 text-sm text-navy-900 shadow-sm ring-1 ring-inset ring-navy-200 placeholder:text-navy-300 focus:ring-2 focus:ring-inset focus:ring-brand-500';

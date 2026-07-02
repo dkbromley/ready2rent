@@ -131,10 +131,10 @@ function EditRow({ item, onDone }: { item: ChecklistItem; onDone: () => void }) 
   return (
     <form action={save} className="flex flex-1 items-center gap-2">
       <input name="text" defaultValue={item.text} maxLength={280} autoFocus className={inputClass} />
-      <button type="submit" disabled={pending} aria-label="Save" className="rounded-lg p-1.5 text-status-completed hover:bg-white">
+      <button type="submit" disabled={pending} aria-label="Save" className="rounded-lg p-1.5 text-status-completed hover:bg-sand-100">
         {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
       </button>
-      <button type="button" onClick={onDone} aria-label="Cancel" className="rounded-lg p-1.5 text-navy-400 hover:bg-white">
+      <button type="button" onClick={onDone} aria-label="Cancel" className="rounded-lg p-1.5 text-navy-400 hover:bg-sand-100">
         <X className="h-4 w-4" />
       </button>
     </form>
@@ -158,7 +158,7 @@ function IconBtn({
       aria-label={label}
       onClick={onClick}
       disabled={disabled}
-      className="rounded-lg p-1.5 text-navy-500 transition hover:bg-white disabled:opacity-30"
+      className="rounded-lg p-1.5 text-navy-500 transition hover:bg-sand-100 disabled:opacity-30"
     >
       {children}
     </button>
