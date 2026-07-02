@@ -144,8 +144,24 @@ export function HeroSyncDemo() {
           </div>
 
           <div className="mt-2 space-y-2">
-            {synced && (
-              <div className="animate-pop-in relative flex items-center justify-between overflow-hidden rounded-xl border border-sand-100 bg-surface p-2.5 pl-3.5">
+            {/* Ghost + real card stacked in one grid cell so the slot's height
+                is constant — the card fading in never reflows the hero. */}
+            <div className="grid">
+              <div
+                className={cn(
+                  'col-start-1 row-start-1 flex items-center justify-center rounded-xl border border-dashed border-sand-200 p-2.5 transition-opacity duration-300',
+                  synced && 'opacity-0',
+                )}
+                aria-hidden="true"
+              >
+                <p className="text-[11px] text-navy-300">Next turnover appears here…</p>
+              </div>
+              <div
+                className={cn(
+                  'relative col-start-1 row-start-1 flex items-center justify-between overflow-hidden rounded-xl border border-sand-100 bg-surface p-2.5 pl-3.5',
+                  synced ? 'animate-pop-in' : 'opacity-0',
+                )}
+              >
                 <span className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-coral-400 to-coral-600" />
                 <div>
                   <p className="text-sm font-semibold text-navy-900">Seaside Cottage</p>
@@ -155,7 +171,7 @@ export function HeroSyncDemo() {
                   Same-day
                 </span>
               </div>
-            )}
+            </div>
             <div className="relative flex items-center justify-between overflow-hidden rounded-xl border border-sand-100 bg-surface p-2.5 pl-3.5">
               <span className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-brand-400 to-brand-600" />
               <div>
