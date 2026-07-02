@@ -31,17 +31,19 @@
    50 becomes a dark tint), sand becomes deep teal-navy surfaces. Accents
    (brand/coral/status) are shared with light mode. */
 .dark {
+  /* 50–200 stay dark: they back fills, borders, rings, hover tints.
+     300–950 carry text and are kept bright for readability on dark surfaces. */
   --navy-50: 26 36 54;
-  --navy-100: 36 48 68;
-  --navy-200: 54 68 94;
-  --navy-300: 92 108 138;
-  --navy-400: 128 144 172;
-  --navy-500: 154 170 196;
-  --navy-600: 176 190 212;
-  --navy-700: 198 210 228;
-  --navy-800: 220 229 241;
-  --navy-900: 236 242 250;
-  --navy-950: 247 250 254;
+  --navy-100: 38 50 70;
+  --navy-200: 58 74 100;
+  --navy-300: 128 143 168;
+  --navy-400: 165 178 200;
+  --navy-500: 193 203 220;
+  --navy-600: 212 220 232;
+  --navy-700: 226 232 242;
+  --navy-800: 236 241 248;
+  --navy-900: 243 247 252;
+  --navy-950: 250 252 255;
 
   --sand-50: 9 17 28;
   --sand-100: 20 31 46;

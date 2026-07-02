@@ -58,7 +58,7 @@ export function OnboardingChecklist({ state }: { state: OnboardingState }) {
         </div>
         <div className="text-right">
           <p className="text-2xl font-extrabold tracking-tight text-white">{doneCount}/3</p>
-          <p className="text-[11px] text-navy-200">steps done</p>
+          <p className="text-[11px] text-white/70">steps done</p>
         </div>
       </div>
 

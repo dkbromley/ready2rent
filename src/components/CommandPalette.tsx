@@ -144,7 +144,7 @@ export function CommandPalette({ items, canAddProperty }: { items: PaletteItem[]
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center bg-navy-950/40 p-4 pt-[12vh] backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/50 p-4 pt-[12vh] backdrop-blur-sm"
       onClick={close}
     >
       <div

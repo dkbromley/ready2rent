@@ -140,9 +140,9 @@ const TILE_ICON: Record<Tone, string> = {
 const TILE_VALUE: Record<Tone, string> = {
   neutral: 'text-navy-900',
   teal: 'text-navy-900',
-  coral: 'text-coral-600',
-  green: 'text-status-completed',
-  amber: 'text-amber-700',
+  coral: 'text-coral-600 dark:text-coral-300',
+  green: 'text-status-completed dark:text-brand-300',
+  amber: 'text-amber-700 dark:text-amber-300',
 };
 
 /** Summary tile: tinted icon chip, label, big value. The dashboard stat card. */
