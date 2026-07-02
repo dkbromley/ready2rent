@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import {
-  Waves,
   CalendarSync,
   Sparkles,
   ArrowRight,
@@ -17,6 +16,7 @@ import {
 } from 'lucide-react';
 import { LinkButton } from '@/components/ui';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { Logo, LogoMark } from '@/components/Logo';
 
 export const metadata = {
   title: 'Vacation rental turnovers, finally in sync',
@@ -28,12 +28,7 @@ export default function LandingPage() {
       {/* ---- Hero band (dark ocean) ---- */}
       <div className="ocean-hero relative overflow-hidden">
         <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <span className="inline-flex items-center gap-2 text-lg font-extrabold tracking-tight text-white">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-brand-300 to-brand-600 shadow-[0_6px_16px_-4px_rgba(20,184,166,0.6)]">
-              <Waves className="h-4 w-4" />
-            </span>
-            Ready2Rent
-          </span>
+          <Logo tone="onDark" markClassName="h-8 w-8" className="text-lg" />
           <nav className="flex items-center gap-1 sm:gap-2">
             <a href="#features" className="hidden rounded-xl px-3 py-2 text-sm font-medium text-white/70 hover:text-white sm:block">Features</a>
             <a href="#how" className="hidden rounded-xl px-3 py-2 text-sm font-medium text-white/70 hover:text-white sm:block">How it works</a>
@@ -92,9 +87,7 @@ export default function LandingPage() {
                     <p className="text-[10px] font-bold uppercase tracking-wider text-brand-600">Today · Sat Jul 5</p>
                     <p className="text-lg font-extrabold tracking-tight text-navy-900">Turnover dashboard</p>
                   </div>
-                  <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white">
-                    <Waves className="h-4 w-4" />
-                  </span>
+                  <LogoMark className="h-8 w-8 rounded-[9px]" />
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-2">
                   {[
@@ -247,9 +240,7 @@ export default function LandingPage() {
 
       <footer className="border-t border-sand-200 bg-surface">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-6 py-6 text-sm text-navy-500 sm:flex-row">
-          <span className="inline-flex items-center gap-2 font-semibold text-navy-700">
-            <Waves className="h-4 w-4 text-brand-600" /> Ready2Rent
-          </span>
+          <Logo markClassName="h-6 w-6" className="text-sm text-navy-700" />
           <span>From checkout to clean — without the texts.</span>
         </div>
       </footer>

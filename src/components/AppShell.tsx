@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { UserRole } from '@prisma/client';
 import {
-  Waves,
   LayoutDashboard,
   Home,
   CalendarDays,
@@ -25,6 +24,7 @@ import { cn } from '@/lib/utils';
 import { signOutAction } from '@/app/(app)/auth-actions';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { CommandPalette, openCommandPalette } from '@/components/CommandPalette';
+import { Logo } from '@/components/Logo';
 
 interface NavItem {
   href: string;
@@ -78,11 +78,8 @@ export function AppShell({
     <div className="app-bg min-h-screen">
       <header className="sticky top-0 z-30 border-b border-sand-200 bg-surface/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          <Link href="/dashboard" className="inline-flex items-center gap-2 text-base font-extrabold tracking-tight text-navy-900">
-            <span className="grid h-7 w-7 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-[0_4px_12px_-2px_rgba(20,184,166,0.5)]">
-              <Waves className="h-4 w-4" />
-            </span>
-            Ready2Rent
+          <Link href="/dashboard" aria-label="Ready2Rent home">
+            <Logo />
           </Link>
           <div className="flex items-center gap-2">
             <button
