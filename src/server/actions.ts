@@ -1,5 +1,6 @@
 'use server';
 
+import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
@@ -1074,4 +1075,52 @@ export async function deleteExpense(expenseId: string) {
   await prisma.expense.delete({ where: { id: expenseId } });
   revalidatePath('/financials');
   revalidatePath('/dashboard');
+}
+
+// ---------------------------------------------------------------------------
+// Account security
+// ---------------------------------------------------------------------------
+
+export interface PasswordFormState {
+  error?: string;
+  success?: boolean;
+}
+
+const passwordChangeSchema = z.object({
+  currentPassword: z.string().optional(),
+  newPassword: z.string().min(8, 'Use at least 8 characters').max(200),
+  confirmPassword: z.string(),
+});
+
+/** Self-service change password for the signed-in user (any role). Verifies the
+ * current password when the account already has one. Uses the useActionState
+ * shape (returns a state object) rather than throwing. */
+export async function changePassword(
+  _prev: PasswordFormState,
+  formData: FormData,
+): Promise<PasswordFormState> {
+  const user = await requireUser();
+  const parsed = passwordChangeSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: parsed.error.errors[0]?.message ?? 'Invalid input.' };
+  const { currentPassword, newPassword, confirmPassword } = parsed.data;
+  if (newPassword !== confirmPassword) return { error: 'New passwords do not match.' };
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { passwordHash: true },
+  });
+  if (!dbUser) return { error: 'Account not found.' };
+
+  if (dbUser.passwordHash) {
+    if (!currentPassword) return { error: 'Enter your current password.' };
+    const ok = await bcrypt.compare(currentPassword, dbUser.passwordHash);
+    if (!ok) return { error: 'Current password is incorrect.' };
+    if (currentPassword === newPassword) {
+      return { error: 'New password must be different from the current one.' };
+    }
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+  return { success: true };
 }
