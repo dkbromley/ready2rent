@@ -27,6 +27,12 @@ export default function LoginPage() {
           />
         </Field>
 
+        <div className="text-right">
+          <Link href="/forgot-password" className="text-xs font-medium text-brand-700 hover:underline">
+            Forgot password?
+          </Link>
+        </div>
+
         {state.error && <p className="text-sm text-status-problem">{state.error}</p>}
 
         <Button type="submit" disabled={pending} className="w-full">
