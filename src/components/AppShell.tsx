@@ -15,6 +15,7 @@ import {
   Archive,
   BarChart3,
   Wallet,
+  Settings,
   LogOut,
   MoreHorizontal,
   Search,
@@ -48,6 +49,7 @@ const NAV: NavItem[] = [
   { href: '/admin/analytics', label: 'Analytics', icon: <BarChart3 className="h-5 w-5" />, roles: [UserRole.ADMIN] },
   { href: '/admin', label: 'Admin', icon: <Users className="h-5 w-5" />, roles: [UserRole.ADMIN] },
   { href: '/admin/sync', label: 'Sync health', icon: <Activity className="h-5 w-5" />, roles: [UserRole.ADMIN] },
+  { href: '/settings', label: 'Settings', icon: <Settings className="h-5 w-5" />, roles: [UserRole.OWNER, UserRole.CLEANER, UserRole.ADMIN] },
 ];
 
 export function AppShell({
@@ -108,10 +110,10 @@ export function AppShell({
                 </span>
               )}
             </Link>
-            <div className="hidden text-right sm:block">
+            <Link href="/settings" className="hidden rounded-lg px-2 py-1 text-right transition hover:bg-navy-50 sm:block" title="Settings">
               <p className="text-sm font-medium text-navy-800">{name ?? email}</p>
               <p className="text-xs capitalize text-navy-400">{role.toLowerCase()}</p>
-            </div>
+            </Link>
             <form action={signOutAction}>
               <button className="rounded-lg p-2 text-navy-600 hover:bg-navy-50" title="Sign out">
                 <LogOut className="h-5 w-5" />
