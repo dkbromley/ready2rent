@@ -70,7 +70,7 @@ export function PropertyImageUpload({
           <button
             onClick={() => inputRef.current?.click()}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-navy-900/75 px-3 py-1.5 text-xs font-medium text-white backdrop-blur transition hover:bg-navy-900 disabled:opacity-70"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-black/60 px-3 py-1.5 text-xs font-medium text-white backdrop-blur transition hover:bg-black/80 disabled:opacity-70"
           >
             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
             {imageUrl ? 'Replace' : 'Add photo'}
@@ -79,7 +79,7 @@ export function PropertyImageUpload({
             <button
               onClick={onRemove}
               disabled={isPending}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-navy-900/75 px-3 py-1.5 text-xs font-medium text-white backdrop-blur transition hover:bg-status-problem disabled:opacity-70"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-black/60 px-3 py-1.5 text-xs font-medium text-white backdrop-blur transition hover:bg-status-problem disabled:opacity-70"
             >
               {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
             </button>

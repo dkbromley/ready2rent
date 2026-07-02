@@ -415,9 +415,9 @@ export function FinancialsManager({ role, properties, payments, expenses, summar
                 {perProperty.map((r) => (
                   <tr key={r.propertyId} className="border-b border-sand-100 last:border-0">
                     <td className="px-4 py-2.5 font-medium text-navy-800">{r.name}</td>
-                    <td className="px-4 py-2.5 text-right text-amber-700">{r.due ? formatMoney(r.due) : '—'}</td>
-                    <td className="px-4 py-2.5 text-right text-status-completed">{r.paid ? formatMoney(r.paid) : '—'}</td>
-                    <td className="px-4 py-2.5 text-right text-coral-600">{r.expenses ? formatMoney(r.expenses) : '—'}</td>
+                    <td className="px-4 py-2.5 text-right text-amber-700 dark:text-amber-300">{r.due ? formatMoney(r.due) : '—'}</td>
+                    <td className="px-4 py-2.5 text-right text-status-completed dark:text-brand-300">{r.paid ? formatMoney(r.paid) : '—'}</td>
+                    <td className="px-4 py-2.5 text-right text-coral-600 dark:text-coral-300">{r.expenses ? formatMoney(r.expenses) : '—'}</td>
                   </tr>
                 ))}
               </tbody>

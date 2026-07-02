@@ -124,9 +124,9 @@ export default async function PublicStatusPage({ params }: { params: Promise<{ t
         )}
 
         {/* CTA */}
-        <div className="card mt-8 bg-navy-900 p-6 text-center text-white">
+        <div className="ocean-hero mt-8 rounded-2xl p-6 text-center text-white shadow-card">
           <p className="text-lg font-semibold">Want to manage turnovers yourself?</p>
-          <p className="mt-1 text-sm text-navy-200">Track every checkout, assign cleaners, and connect all your listings in one place.</p>
+          <p className="mt-1 text-sm text-white/70">Track every checkout, assign cleaners, and connect all your listings in one place.</p>
           <Link href={ctaHref} className="mt-4 inline-flex rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-400">
             {unclaimed ? 'Claim this property free' : 'Join Ready2Rent free'}
           </Link>

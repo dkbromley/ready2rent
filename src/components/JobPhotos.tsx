@@ -106,7 +106,7 @@ export function JobPhotos({
                   onClick={() => onDelete(photo.id)}
                   disabled={isPending && deletingId === photo.id}
                   aria-label="Delete photo"
-                  className="absolute right-1 top-1 rounded-lg bg-navy-900/70 p-1.5 text-white opacity-0 transition group-hover:opacity-100 focus:opacity-100 disabled:opacity-100"
+                  className="absolute right-1 top-1 rounded-lg bg-black/60 p-1.5 text-white opacity-0 transition group-hover:opacity-100 focus:opacity-100 disabled:opacity-100"
                 >
                   {isPending && deletingId === photo.id ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />

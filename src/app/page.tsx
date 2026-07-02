@@ -35,10 +35,10 @@ export default function LandingPage() {
             Ready2Rent
           </span>
           <nav className="flex items-center gap-1 sm:gap-2">
-            <a href="#features" className="hidden rounded-xl px-3 py-2 text-sm font-medium text-navy-200 hover:text-white sm:block">Features</a>
-            <a href="#how" className="hidden rounded-xl px-3 py-2 text-sm font-medium text-navy-200 hover:text-white sm:block">How it works</a>
-            <ThemeToggle className="rounded-lg p-2 text-navy-200 transition hover:bg-white/10 hover:text-white" />
-            <Link href="/login" className="rounded-xl px-3 py-2 text-sm font-medium text-navy-100 hover:text-white">Sign in</Link>
+            <a href="#features" className="hidden rounded-xl px-3 py-2 text-sm font-medium text-white/70 hover:text-white sm:block">Features</a>
+            <a href="#how" className="hidden rounded-xl px-3 py-2 text-sm font-medium text-white/70 hover:text-white sm:block">How it works</a>
+            <ThemeToggle className="rounded-lg p-2 text-white/70 transition hover:bg-white/10 hover:text-white" />
+            <Link href="/login" className="rounded-xl px-3 py-2 text-sm font-medium text-white/85 hover:text-white">Sign in</Link>
             <LinkButton href="/signup">Get started</LinkButton>
           </nav>
         </header>
@@ -58,7 +58,7 @@ export default function LandingPage() {
                 without the texts.
               </span>
             </h1>
-            <p className="mt-5 max-w-xl text-lg leading-relaxed text-navy-200">
+            <p className="mt-5 max-w-xl text-lg leading-relaxed text-white/70">
               Ready2Rent pulls reservations straight from your booking calendars and turns every
               checkout into a scheduled turnover job — with checklists, photo proof, and payment
               tracking your whole crew stays on top of.
@@ -74,7 +74,7 @@ export default function LandingPage() {
                 I have an account
               </Link>
             </div>
-            <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm text-navy-200">
+            <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/70">
               {['No Airbnb password needed', 'Works with any iCal link', 'Same-day turnover alerts'].map((item) => (
                 <li key={item} className="inline-flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4 text-brand-300" /> {item}
@@ -234,7 +234,7 @@ export default function LandingPage() {
           <h2 className="relative text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
             From checkout to clean — automatically.
           </h2>
-          <p className="relative mx-auto mt-3 max-w-xl text-navy-200">
+          <p className="relative mx-auto mt-3 max-w-xl text-white/70">
             Connect a calendar and watch your first turnover jobs appear in minutes.
           </p>
           <div className="relative mt-7 flex justify-center">

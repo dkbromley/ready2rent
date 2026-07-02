@@ -166,15 +166,15 @@ export default async function PropertyDetailPage({
         <div className="mt-3 grid grid-cols-3 gap-3">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-navy-400">Outstanding</p>
-            <p className="mt-0.5 text-xl font-extrabold tracking-tight text-amber-700">{formatMoney(fin.due)}</p>
+            <p className="mt-0.5 text-xl font-extrabold tracking-tight text-amber-700 dark:text-amber-300">{formatMoney(fin.due)}</p>
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-navy-400">Paid</p>
-            <p className="mt-0.5 text-xl font-extrabold tracking-tight text-status-completed">{formatMoney(fin.paid)}</p>
+            <p className="mt-0.5 text-xl font-extrabold tracking-tight text-status-completed dark:text-brand-300">{formatMoney(fin.paid)}</p>
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-navy-400">Expenses</p>
-            <p className="mt-0.5 text-xl font-extrabold tracking-tight text-coral-600">{formatMoney(fin.expenses)}</p>
+            <p className="mt-0.5 text-xl font-extrabold tracking-tight text-coral-600 dark:text-coral-300">{formatMoney(fin.expenses)}</p>
           </div>
         </div>
       </Card>
