@@ -157,6 +157,7 @@ model User {
   invitesAccepted        Invitation[]            @relation("InvitesAccepted")
   createdPayments        Payment[]               @relation("PaymentCreatedBy")
   createdExpenses        Expense[]               @relation("ExpenseCreatedBy")
+  passwordResetTokens    PasswordResetToken[]
 
   @@index([role])
 }
@@ -753,4 +754,20 @@ model Expense {
   createdByUser User?    @relation("ExpenseCreatedBy", fields: [createdByUserId], references: [id])
 
   @@index([propertyId, incurredAt])
+}
+
+/// Single-use, short-lived password reset token. Only the SHA-256 hash of the
+/// token is stored, so a DB leak can't be used to reset passwords. Consumed on
+/// use (usedAt) and expired after ~1h.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
