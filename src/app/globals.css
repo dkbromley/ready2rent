@@ -80,6 +80,26 @@ body {
   @apply rounded-2xl border border-sand-100 bg-surface shadow-card;
 }
 
+/* Deep-ocean marketing band (landing hero / CTA). Intentionally dark in both
+   light and dark mode — it's a brand surface, not an app surface. */
+.ocean-hero {
+  background:
+    radial-gradient(760px 420px at 82% -10%, rgba(45, 212, 191, 0.35), transparent 60%),
+    radial-gradient(620px 420px at 6% 108%, rgba(56, 189, 248, 0.28), transparent 60%),
+    linear-gradient(170deg, #06302f 0%, #072c3f 55%, #05202e 100%);
+  color: #fff;
+}
+
+/* Slow drift for hero background accents; respects reduced-motion. */
+@keyframes tr-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-float { animation: tr-float 7s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-float { animation: none; }
+}
+
 /* Visible-but-tasteful keyboard focus everywhere. */
 :focus-visible {
   outline: 2px solid #14b8a6;

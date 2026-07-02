@@ -5,6 +5,8 @@ import { AlertTriangle, Home, Plus, Play, CircleCheck, Building2, Wallet } from 
 import { requireUser } from '@/lib/rbac';
 import { getOwnerDashboard } from '@/server/queries';
 import { getOutstandingForUser } from '@/server/financials';
+import { getOwnerOnboarding } from '@/server/onboarding';
+import { OnboardingChecklist } from '@/components/OnboardingChecklist';
 import { formatMoney } from '@/lib/money';
 import { PageHeader, StatTile, SectionTitle, EmptyState, LinkButton, Card } from '@/components/ui';
 import { JobCard } from '@/components/JobCard';
@@ -17,9 +19,10 @@ export default async function DashboardPage() {
   const user = await requireUser();
   if (user.role === UserRole.CLEANER) redirect('/cleaner');
 
-  const [d, outstanding] = await Promise.all([
+  const [d, outstanding, onboarding] = await Promise.all([
     getOwnerDashboard(user),
     getOutstandingForUser(user),
+    getOwnerOnboarding(user),
   ]);
 
   const today = new Date().toLocaleDateString('en-US', {
@@ -40,6 +43,8 @@ export default async function DashboardPage() {
           </LinkButton>
         }
       />
+
+      <OnboardingChecklist state={onboarding} />
 
       {d.syncErrors.length > 0 && (
         <div className="mb-6 flex items-start gap-3 rounded-2xl border border-coral-200 bg-coral-50 p-4">
