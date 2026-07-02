@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { Waves, Home, MapPin, CheckCircle2, Sparkles } from 'lucide-react';
+import { Home, MapPin, CheckCircle2, Sparkles } from 'lucide-react';
+import { Logo } from '@/components/Logo';
 import { UserRole } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/rbac';
@@ -14,8 +15,8 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="coastal-gradient flex min-h-screen flex-col">
       <header className="px-6 py-5">
-        <Link href="/" className="inline-flex items-center gap-2 font-bold text-navy-900">
-          <Waves className="h-6 w-6 text-brand-600" /> Ready2Rent
+        <Link href="/" aria-label="Ready2Rent home">
+          <Logo />
         </Link>
       </header>
       <main className="flex flex-1 items-center justify-center px-4 py-8">

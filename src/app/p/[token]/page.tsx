@@ -1,7 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Waves, LogOut, LogIn, CheckCircle2 } from 'lucide-react';
+import { LogOut, LogIn, CheckCircle2 } from 'lucide-react';
+import { Logo } from '@/components/Logo';
 import { JobStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { formatInTz } from '@/lib/datetime';
@@ -47,8 +48,7 @@ export default async function PublicStatusPage({ params }: { params: Promise<{ t
   return (
     <div className="coastal-gradient min-h-screen">
       <header className="mx-auto flex max-w-2xl items-center gap-2 px-6 py-5">
-        <Waves className="h-6 w-6 text-brand-600" />
-        <span className="font-bold text-navy-900">Ready2Rent</span>
+        <Logo />
       </header>
 
       <main className="mx-auto max-w-2xl px-6 pb-16">

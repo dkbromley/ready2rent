@@ -32,7 +32,7 @@ export async function sendInvitationEmail(invitationId: string): Promise<void> {
 
   const html = `
   <div style="font-family:ui-sans-serif,system-ui,sans-serif;max-width:520px;margin:auto;color:#1d2748">
-    <div style="padding:20px 0"><span style="font-size:18px;font-weight:700;color:#0d9488">Ready2Rent</span></div>
+    <div style="padding:20px 0"><span style="font-size:18px;font-weight:800;letter-spacing:-0.02em;color:#1d2748">Ready<span style="color:#0d9488">2</span>Rent</span></div>
     <p style="font-size:15px;line-height:1.5">
       ${escapeHtml(inviter)} invited you to join Ready2Rent as the <strong>${roleWord}</strong>${ctx}.
     </p>
