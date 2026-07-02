@@ -50,14 +50,6 @@ npm run db:seed
 npm run dev              # http://localhost:3000
 ```
 
-### Demo accounts (after seeding) — password `password123`
-
-| Role | Email |
-|---|---|
-| Owner | `owner@ready2rent.io` |
-| Cleaner | `cleaner@ready2rent.io` |
-| Admin | `admin@ready2rent.io` |
-
 ### Recurring sync
 
 - **Local / self-hosted:** `npm run sync:worker` (polls every 15 min).
