@@ -95,6 +95,8 @@ export async function getOwnerDashboard(user: SessionUser) {
 
   const [
     upcomingCheckouts,
+    todaysJobs,
+    problemJobs,
     sameDayTurnovers,
     needingAssignment,
     inProgress,
@@ -113,6 +115,19 @@ export async function getOwnerDashboard(user: SessionUser) {
       include: { property: true, reservation: true },
       orderBy: { checkoutDateTime: 'asc' },
       take: 12,
+    }),
+    // Everything happening today, whatever its state — feeds the timeline.
+    prisma.turnoverJob.findMany({
+      where: { ...jobScope, checkoutDateTime: { gte: todayStart, lte: todayEnd } },
+      include: { property: true },
+      orderBy: { checkoutDateTime: 'asc' },
+      take: 10,
+    }),
+    prisma.turnoverJob.findMany({
+      where: { property: propScope, status: JobStatus.PROBLEM },
+      include: { property: true },
+      orderBy: { checkoutDateTime: 'asc' },
+      take: 6,
     }),
     prisma.turnoverJob.findMany({
       where: { ...jobScope, sameDayTurnover: true, checkoutDateTime: { gte: todayStart } },
@@ -140,6 +155,8 @@ export async function getOwnerDashboard(user: SessionUser) {
 
   return {
     upcomingCheckouts,
+    todaysJobs,
+    problemJobs,
     sameDayTurnovers,
     needingAssignment,
     inProgress,
