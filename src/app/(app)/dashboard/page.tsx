@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { JobStatus, UserRole } from '@prisma/client';
-import { AlertTriangle, Plus, Play, CircleCheck, Building2, Wallet } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Plus, Play, CircleCheck, Building2, Wallet } from 'lucide-react';
 import { requireUser } from '@/lib/rbac';
 import { getOwnerDashboard } from '@/server/queries';
 import { getOutstandingForUser } from '@/server/financials';
@@ -99,6 +99,19 @@ export default async function DashboardPage() {
           summary={summary}
           doneToday={doneToday}
           totalToday={totalToday}
+          actions={
+            <>
+              <LinkButton href="/properties/new">
+                <Plus className="h-4 w-4" /> Add property
+              </LinkButton>
+              <Link
+                href="/jobs"
+                className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white ring-1 ring-inset ring-white/25 transition hover:bg-white/10"
+              >
+                View turnovers <ArrowRight className="h-4 w-4" />
+              </Link>
+            </>
+          }
         />
       ) : (
         <>

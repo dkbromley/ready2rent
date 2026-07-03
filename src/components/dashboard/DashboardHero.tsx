@@ -1,11 +1,9 @@
-import { Plus, ArrowRight, CalendarCheck2 } from 'lucide-react';
-import Link from 'next/link';
-import { LinkButton } from '@/components/ui';
+import { CalendarCheck2 } from 'lucide-react';
 
 /**
  * The dashboard's greeting band: time-of-day greeting, a one-sentence summary
- * of the day, quick actions, and a progress ring of today's cleans. The one
- * ocean-brand surface inside the app — shown once hosts finish onboarding.
+ * of the day, role-specific quick actions, and a progress ring of today's
+ * cleans. The one ocean-brand surface inside the app.
  */
 export function DashboardHero({
   name,
@@ -13,12 +11,14 @@ export function DashboardHero({
   summary,
   doneToday,
   totalToday,
+  actions,
 }: {
   name: string | null | undefined;
   dateLabel: string;
   summary: string;
   doneToday: number;
   totalToday: number;
+  actions?: React.ReactNode;
 }) {
   const hour = new Date().getHours();
   const greeting = hour < 5 ? 'Up early' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -35,17 +35,7 @@ export function DashboardHero({
             {firstName ? `, ${firstName}` : ''}
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/70">{summary}</p>
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <LinkButton href="/properties/new">
-              <Plus className="h-4 w-4" /> Add property
-            </LinkButton>
-            <Link
-              href="/jobs"
-              className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white ring-1 ring-inset ring-white/25 transition hover:bg-white/10"
-            >
-              View turnovers <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
+          {actions && <div className="mt-5 flex flex-wrap items-center gap-3">{actions}</div>}
         </div>
 
         <div className="shrink-0 sm:pr-2">
