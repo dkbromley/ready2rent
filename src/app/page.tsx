@@ -1,13 +1,10 @@
 import Link from 'next/link';
 import {
   CalendarSync,
-  Sparkles,
   ArrowRight,
   CheckCircle2,
-  ClipboardCheck,
-  Camera,
-  Boxes,
-  Wallet,
+  ChevronDown,
+  X,
   Home,
   Brush,
   Umbrella,
@@ -16,7 +13,17 @@ import {
 } from 'lucide-react';
 import { LinkButton } from '@/components/ui';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { Logo, LogoMark } from '@/components/Logo';
+import { Logo } from '@/components/Logo';
+import { HeroSyncDemo } from '@/components/marketing/HeroSyncDemo';
+import { WaveDivider } from '@/components/marketing/WaveDivider';
+import {
+  CalendarSyncArt,
+  JobTicketArt,
+  ChecklistArt,
+  PhotoProofArt,
+  LinensArt,
+  PaymentsArt,
+} from '@/components/marketing/SpotArt';
 
 export const metadata = {
   title: 'Vacation rental turnovers, finally in sync',
@@ -26,12 +33,13 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-sand-50">
       {/* ---- Hero band (dark ocean) ---- */}
-      <div className="ocean-hero relative overflow-hidden">
+      <div className="ocean-hero ocean-grain relative overflow-hidden">
         <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
           <Logo tone="onDark" markClassName="h-8 w-8" className="text-lg" />
           <nav className="flex items-center gap-1 sm:gap-2">
             <a href="#features" className="hidden rounded-xl px-3 py-2 text-sm font-medium text-white/70 hover:text-white sm:block">Features</a>
-            <a href="#how" className="hidden rounded-xl px-3 py-2 text-sm font-medium text-white/70 hover:text-white sm:block">How it works</a>
+            <a href="#pricing" className="hidden rounded-xl px-3 py-2 text-sm font-medium text-white/70 hover:text-white sm:block">Pricing</a>
+            <a href="#faq" className="hidden rounded-xl px-3 py-2 text-sm font-medium text-white/70 hover:text-white md:block">FAQ</a>
             <ThemeToggle className="rounded-lg p-2 text-white/70 transition hover:bg-white/10 hover:text-white" />
             <Link href="/login" className="rounded-xl px-3 py-2 text-sm font-medium text-white/85 hover:text-white">Sign in</Link>
             <LinkButton href="/signup">Get started</LinkButton>
@@ -42,18 +50,18 @@ export default function LandingPage() {
         <div className="animate-float pointer-events-none absolute -right-24 top-10 h-72 w-72 rounded-full bg-brand-400/20 blur-3xl" />
         <div className="pointer-events-none absolute -left-20 bottom-0 h-64 w-64 rounded-full bg-sky-400/10 blur-3xl" />
 
-        <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-10 px-6 pb-20 pt-10 sm:pt-16 lg:grid-cols-2 lg:pb-28">
+        <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-10 px-6 pb-16 pt-10 sm:pt-16 lg:grid-cols-2 lg:pb-24">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-brand-200 ring-1 ring-inset ring-white/20 backdrop-blur">
               <CalendarSync className="h-3.5 w-3.5" /> Airbnb &amp; Vrbo calendar sync
             </span>
             <h1 className="mt-5 text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-[3.5rem]">
               From checkout to clean —{' '}
-              <span className="bg-gradient-to-r from-brand-300 to-sky-300 bg-clip-text text-transparent">
+              <span className="inline-block bg-gradient-to-r from-brand-300 to-sky-300 bg-clip-text pb-[0.12em] text-transparent">
                 and everything in between.
               </span>
             </h1>
-            <p className="mt-5 max-w-xl text-lg leading-relaxed text-white/70">
+            <p className="mt-4 max-w-xl text-lg leading-relaxed text-white/70">
               Ready2Rent pulls reservations straight from your booking calendars and turns every
               checkout into a scheduled turnover job — with checklists, photo proof, and payment
               tracking your whole crew stays on top of.
@@ -63,10 +71,10 @@ export default function LandingPage() {
                 Start free <ArrowRight className="h-4 w-4" />
               </LinkButton>
               <Link
-                href="/login"
+                href="/demo"
                 className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-base font-semibold text-white ring-1 ring-inset ring-white/25 transition hover:bg-white/10"
               >
-                I have an account
+                Try the live demo
               </Link>
             </div>
             <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/70">
@@ -78,60 +86,33 @@ export default function LandingPage() {
             </ul>
           </div>
 
-          {/* Product preview mockup */}
+          {/* Animated product preview: reservation → sync → turnover job */}
           <div className="relative">
-            <div className="rounded-2xl border border-white/15 bg-white/10 p-3 shadow-2xl backdrop-blur-md">
-              <div className="rounded-xl bg-surface p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-brand-600">Today · Sat Jul 5</p>
-                    <p className="text-lg font-extrabold tracking-tight text-navy-900">Turnover dashboard</p>
-                  </div>
-                  <LogoMark className="h-8 w-8 rounded-[9px]" />
-                </div>
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                  {[
-                    { l: 'Properties', v: '6', c: 'text-navy-900' },
-                    { l: 'Same-day', v: '2', c: 'text-coral-600' },
-                    { l: 'Outstanding', v: '$480', c: 'text-amber-700' },
-                  ].map((s) => (
-                    <div key={s.l} className="rounded-xl border border-sand-100 bg-sand-50 p-3">
-                      <p className="text-[9px] font-semibold uppercase tracking-wider text-navy-400">{s.l}</p>
-                      <p className={`mt-0.5 text-lg font-extrabold tracking-tight ${s.c}`}>{s.v}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-2 space-y-2">
-                  {[
-                    { n: 'Seaside Cottage', t: '10:00a → 4:00p', tag: 'Same-day', tone: 'bg-coral-50 text-coral-600' },
-                    { n: 'Dune Retreat', t: 'Checkout 11:00a', tag: 'Scheduled', tone: 'bg-sky-50 text-sky-700' },
-                  ].map((j) => (
-                    <div key={j.n} className="relative flex items-center justify-between overflow-hidden rounded-xl border border-sand-100 bg-surface p-2.5 pl-3.5">
-                      <span className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-brand-400 to-brand-600" />
-                      <div>
-                        <p className="text-sm font-semibold text-navy-900">{j.n}</p>
-                        <p className="text-[11px] text-navy-400">{j.t}</p>
-                      </div>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${j.tone}`}>{j.tag}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <HeroSyncDemo />
+            <p className="mt-3 text-center text-sm text-white/50">
+              This is the real loop — watch it run on sample data in the{' '}
+              <Link href="/demo" className="font-semibold text-brand-300 underline-offset-2 hover:underline">
+                live demo
+              </Link>
+              .
+            </p>
           </div>
         </div>
+
+        {/* ocean eases into the sand */}
+        <WaveDivider className="relative z-10 text-surface" />
       </div>
 
-      {/* ---- Benefit strip ---- */}
+      {/* ---- Fact strip (all true, all concrete) ---- */}
       <div className="border-b border-sand-200 bg-surface">
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-6 py-8 sm:grid-cols-4">
           {[
-            { k: 'Zero', v: 'missed turnovers' },
-            { k: '1 link', v: 'to connect a calendar' },
-            { k: 'Photos', v: 'as proof of every clean' },
-            { k: 'Hosts + crews', v: 'on the same page' },
+            { k: '1 link', v: 'is the whole setup — your calendar’s iCal export' },
+            { k: '0 passwords', v: 'we never touch your Airbnb or Vrbo login' },
+            { k: 'Every 15 min', v: 'calendars re-checked, jobs kept in sync' },
+            { k: 'Every clean', v: 'checklist-backed with photo proof' },
           ].map((s) => (
-            <div key={s.v}>
+            <div key={s.k}>
               <p className="text-xl font-extrabold tracking-tight text-navy-900">{s.k}</p>
               <p className="text-sm text-navy-500">{s.v}</p>
             </div>
@@ -160,12 +141,12 @@ export default function LandingPage() {
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-navy-900">Built for real turnover days</h2>
           </div>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <Feature icon={<CalendarSync className="h-5 w-5" />} title="Auto calendar sync" desc="Reservations become turnover jobs on a recurring schedule. Dates move or cancel? Jobs update themselves." />
-            <Feature icon={<Sparkles className="h-5 w-5" />} title="Jobs, not texts" desc="Every checkout is a job with the window, notes, and status your cleaner actually needs." />
-            <Feature icon={<ClipboardCheck className="h-5 w-5" />} title="Checklists" desc="Per-property checklists so nothing gets skipped — cleaners tick items off as they go." />
-            <Feature icon={<Camera className="h-5 w-5" />} title="Photo proof & problems" desc="Completion photos and problem reports with images, so hosts see the state of every clean." />
-            <Feature icon={<Boxes className="h-5 w-5" />} title="Inventory" desc="Track linens and supplies per property, with low-stock par levels." />
-            <Feature icon={<Wallet className="h-5 w-5" />} title="Payment tracking" desc="Know what's due and paid per property and per clean — Apple Pay, Venmo, Cash App, Zelle." />
+            <Feature art={<CalendarSyncArt />} title="Auto calendar sync" desc="Reservations become turnover jobs on a recurring schedule. Dates move or cancel? Jobs update themselves." />
+            <Feature art={<JobTicketArt />} title="Jobs, not texts" desc="Every checkout is a job with the window, notes, and status your cleaner actually needs." />
+            <Feature art={<ChecklistArt />} title="Checklists" desc="Per-property checklists so nothing gets skipped — cleaners tick items off as they go." />
+            <Feature art={<PhotoProofArt />} title="Photo proof & problems" desc="Completion photos and problem reports with images, so hosts see the state of every clean." />
+            <Feature art={<LinensArt />} title="Inventory" desc="Track linens and supplies per property, with low-stock par levels." />
+            <Feature art={<PaymentsArt />} title="Payment tracking" desc="Know what's due and paid per property and per clean — Apple Pay, Venmo, Cash App, Zelle." />
           </div>
         </section>
 
@@ -187,6 +168,115 @@ export default function LandingPage() {
           </div>
         </section>
       </main>
+
+      {/* ---- Comparison: the real competitor is the group chat ---- */}
+      <section className="border-y border-sand-200 bg-surface">
+        <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-xs font-bold uppercase tracking-wider text-brand-600">Why switch</p>
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-navy-900">Retire the group chat</h2>
+            <p className="mt-3 text-navy-500">
+              Your real competition isn&rsquo;t software — it&rsquo;s &ldquo;Cleaned&nbsp;✅&rdquo; buried in a text
+              thread. Here&rsquo;s what changes.
+            </p>
+          </div>
+          <div className="card mx-auto mt-10 max-w-4xl divide-y divide-sand-100 overflow-hidden p-0">
+            <div className="hidden grid-cols-3 gap-4 bg-sand-50 px-6 py-3 md:grid">
+              <p className="text-xs font-bold uppercase tracking-wider text-navy-400">When…</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-navy-400">With group texts</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-brand-600">With Ready2Rent</p>
+            </div>
+            {[
+              {
+                when: 'A guest moves their booking',
+                old: 'Someone has to notice, then re-text everyone',
+                now: 'The job moves itself — flagged same-day if the gap is tight',
+              },
+              {
+                when: 'You ask “was it cleaned?”',
+                old: 'A thumbs-up emoji and good faith',
+                now: 'Photo proof and a ticked checklist on every job',
+              },
+              {
+                when: 'It’s time to settle up',
+                old: 'A notes-app tally and Venmo detective work',
+                now: 'Every completed clean logs a payment due, per property',
+              },
+              {
+                when: 'A new cleaner starts',
+                old: 'Forward months of screenshots',
+                now: 'One invite — the whole schedule is already there',
+              },
+            ].map((r) => (
+              <div key={r.when} className="grid gap-2 px-6 py-4 md:grid-cols-3 md:gap-4">
+                <p className="text-sm font-semibold text-navy-900">{r.when}</p>
+                <p className="flex items-start gap-2 text-sm text-navy-400">
+                  <X className="mt-0.5 h-4 w-4 shrink-0 text-navy-300" /> {r.old}
+                </p>
+                <p className="flex items-start gap-2 text-sm text-navy-700">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" /> {r.now}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ---- Pricing ---- */}
+      <section id="pricing" className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="text-xs font-bold uppercase tracking-wider text-brand-600">Pricing</p>
+          <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-navy-900">
+            Free for cleaners. Fair for hosts.
+          </h2>
+          <p className="mt-3 text-navy-500">
+            Ready2Rent is in early access — everything below is free right now. Sign up today and
+            you lock in early-access pricing when billing launches.
+          </p>
+        </div>
+        <div className="mt-10 grid gap-5 md:grid-cols-3">
+          <PricingCard
+            tag="Cleaning crews"
+            price="Free"
+            cadence="forever"
+            blurb="If you do the turnovers, you never pay."
+            points={[
+              'Every job with its exact window',
+              'Checklists & photo upload on your phone',
+              'Track what you’re owed, per host',
+              'Invite your hosts — they’ll thank you',
+            ]}
+            cta="Join free"
+          />
+          <PricingCard
+            tag="Hosts · Starter"
+            price="Free"
+            cadence="1 property"
+            blurb="The full turnover engine for your first door."
+            points={[
+              'Airbnb & Vrbo calendar sync',
+              'Same-day turnover alerts',
+              'Checklists, photo proof & problem reports',
+              'Payment tracking',
+            ]}
+            cta="Start free"
+          />
+          <PricingCard
+            highlight
+            tag="Hosts · Pro"
+            price="$9"
+            cadence="per property / month"
+            blurb="Every door you manage — capped at $49/mo, no matter how many."
+            points={[
+              'Everything in Starter, unlimited properties',
+              'Financials: expenses, receipts & statements',
+              'Inventory with low-stock alerts',
+              'Priority support',
+            ]}
+            cta="Start free"
+          />
+        </div>
+      </section>
 
       {/* ---- Marketplace teaser ---- */}
       <section className="border-y border-sand-200 bg-surface">
@@ -220,38 +310,115 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ---- FAQ ---- */}
+      <section id="faq" className="mx-auto max-w-3xl px-6 py-16 sm:py-20">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="text-xs font-bold uppercase tracking-wider text-brand-600">FAQ</p>
+          <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-navy-900">
+            The questions every host asks
+          </h2>
+        </div>
+        <div className="card mt-10 divide-y divide-sand-100 p-0">
+          <Faq q="Do you need my Airbnb or Vrbo password?">
+            No — and we never ask. You paste the calendar&rsquo;s public iCal export link (Airbnb and
+            Vrbo both provide one). It&rsquo;s read-only, you can revoke it any time from the booking
+            platform, and we store it encrypted.
+          </Faq>
+          <Faq q="How do reservations become cleaning jobs?">
+            We re-check your calendars about every 15 minutes. Each reservation becomes exactly one
+            turnover job anchored to the checkout time, and we look ahead to the next check-in — if a
+            new guest arrives the same day, the job is flagged so your cleaner knows the window is
+            tight.
+          </Faq>
+          <Faq q="What happens when a booking changes or cancels?">
+            The job updates itself. Date changes move the job automatically, and if a reservation
+            disappears from the feed, the job is canceled (completed work and history are never
+            deleted). If you complete or cancel something by hand, a later sync won&rsquo;t undo it.
+          </Faq>
+          <Faq q="What do cleaners get — and what does it cost them?">
+            Nothing, ever — Ready2Rent is free for cleaning crews. Cleaners see every turnover with
+            its exact window, tick off per-property checklists, upload completion photos and problem
+            reports from their phone, and track what they&rsquo;re owed across every host they work
+            with. Cleaners can even add properties and invite their hosts.
+          </Faq>
+          <Faq q="Does it handle payments?">
+            Completing a clean automatically logs a payment due from the property&rsquo;s cleaning
+            price, and both sides see what&rsquo;s outstanding and paid — whether you settle by Apple
+            Pay, Venmo, Cash App, Zelle, or cash. Automatic payouts are on the roadmap.
+          </Faq>
+          <Faq q="What does it cost?">
+            During early access, everything is free. Planned pricing: free forever for cleaners, free
+            for a host&rsquo;s first property, then $9 per property per month capped at $49 — and
+            early-access users lock in their pricing when billing launches.
+          </Faq>
+        </div>
+      </section>
+
       {/* ---- Final CTA ---- */}
-      <section className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
-        <div className="ocean-hero relative overflow-hidden rounded-3xl px-8 py-14 text-center">
+      <section className="mx-auto max-w-6xl px-6 pb-16 sm:pb-20">
+        <div className="ocean-hero ocean-grain relative overflow-hidden rounded-3xl px-8 py-14 text-center">
           <div className="pointer-events-none absolute -right-16 -top-10 h-56 w-56 rounded-full bg-brand-400/20 blur-3xl" />
+          <WaveDivider className="pointer-events-none absolute inset-x-0 bottom-0 text-white/[0.06]" />
           <h2 className="relative text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
             From checkout to clean — automatically.
           </h2>
           <p className="relative mx-auto mt-3 max-w-xl text-white/70">
             Connect a calendar and watch your first turnover jobs appear in minutes.
           </p>
-          <div className="relative mt-7 flex justify-center">
+          <div className="relative mt-7 flex flex-wrap items-center justify-center gap-3">
             <LinkButton href="/signup" className="px-6 py-3 text-base">
               Get started free <ArrowRight className="h-4 w-4" />
             </LinkButton>
+            <Link
+              href="/demo"
+              className="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-base font-semibold text-white ring-1 ring-inset ring-white/25 transition hover:bg-white/10"
+            >
+              Try the live demo
+            </Link>
           </div>
         </div>
       </section>
 
       <footer className="border-t border-sand-200 bg-surface">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-6 py-6 text-sm text-navy-500 sm:flex-row">
-          <Logo markClassName="h-6 w-6" className="text-sm text-navy-700" />
-          <span>From checkout to clean — and everything in between.</span>
+        <div className="mx-auto grid max-w-6xl gap-8 px-6 py-10 sm:grid-cols-3">
+          <div>
+            <Logo markClassName="h-6 w-6" className="text-sm text-navy-700" />
+            <p className="mt-2 max-w-xs text-sm text-navy-500">
+              From checkout to clean — and everything in between.
+            </p>
+          </div>
+          <FooterCol
+            title="Product"
+            links={[
+              { label: 'Features', href: '#features' },
+              { label: 'How it works', href: '#how' },
+              { label: 'Pricing', href: '#pricing' },
+              { label: 'FAQ', href: '#faq' },
+              { label: 'Live demo', href: '/demo' },
+            ]}
+          />
+          <FooterCol
+            title="Get started"
+            links={[
+              { label: 'Create an account', href: '/signup' },
+              { label: 'Sign in', href: '/login' },
+            ]}
+          />
+        </div>
+        <div className="border-t border-sand-100">
+          <p className="mx-auto max-w-6xl px-6 py-4 text-xs text-navy-400">
+            © {new Date().getFullYear()} Ready2Rent
+          </p>
         </div>
       </footer>
     </div>
   );
 }
 
-function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
+function Feature({ art, title, desc }: { art: React.ReactNode; title: string; desc: string }) {
   return (
     <div className="card p-5 transition duration-150 hover:-translate-y-0.5 hover:shadow-card-hover">
-      <div className="inline-flex rounded-xl bg-brand-50 p-2.5 text-brand-700 ring-1 ring-inset ring-brand-600/15">{icon}</div>
+      {art}
       <h3 className="mt-3 font-bold text-navy-900">{title}</h3>
       <p className="mt-1.5 text-sm leading-relaxed text-navy-500">{desc}</p>
     </div>
@@ -292,6 +459,91 @@ function AudienceCard({
         {points.map((p) => (
           <li key={p} className="flex items-start gap-2 text-sm text-navy-600">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" /> {p}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function PricingCard({
+  tag,
+  price,
+  cadence,
+  blurb,
+  points,
+  cta,
+  highlight = false,
+}: {
+  tag: string;
+  price: string;
+  cadence: string;
+  blurb: string;
+  points: string[];
+  cta: string;
+  highlight?: boolean;
+}) {
+  return (
+    <div
+      className={
+        highlight
+          ? 'card relative flex flex-col p-7 ring-2 ring-brand-500'
+          : 'card relative flex flex-col p-7'
+      }
+    >
+      {highlight && (
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-3 py-0.5 text-[11px] font-bold text-white shadow-sm">
+          Most popular
+        </span>
+      )}
+      <p className="text-xs font-bold uppercase tracking-wider text-brand-600">{tag}</p>
+      <p className="mt-3 flex items-baseline gap-2">
+        <span className="text-4xl font-extrabold tracking-tight text-navy-900">{price}</span>
+        <span className="text-sm font-medium text-navy-400">{cadence}</span>
+      </p>
+      <p className="mt-2 text-sm text-navy-500">{blurb}</p>
+      <ul className="mt-5 flex-1 space-y-2.5">
+        {points.map((p) => (
+          <li key={p} className="flex items-start gap-2 text-sm text-navy-600">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" /> {p}
+          </li>
+        ))}
+      </ul>
+      <LinkButton
+        href="/signup"
+        variant={highlight ? 'primary' : 'secondary'}
+        className="mt-6 w-full"
+      >
+        {cta}
+      </LinkButton>
+    </div>
+  );
+}
+
+function Faq({ q, children }: { q: string; children: React.ReactNode }) {
+  return (
+    <details className="group px-6 py-4">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left font-semibold text-navy-900 [&::-webkit-details-marker]:hidden">
+        {q}
+        <ChevronDown className="h-4 w-4 shrink-0 text-navy-400 transition-transform duration-200 group-open:rotate-180" />
+      </summary>
+      <p className="mt-2 text-sm leading-relaxed text-navy-500">{children}</p>
+    </details>
+  );
+}
+
+function FooterCol({ title, links }: { title: string; links: { label: string; href: string }[] }) {
+  return (
+    <div>
+      <p className="text-xs font-bold uppercase tracking-wider text-navy-400">{title}</p>
+      <ul className="mt-3 space-y-2">
+        {links.map((l) => (
+          <li key={l.label}>
+            {l.href.startsWith('#') ? (
+              <a href={l.href} className="text-sm text-navy-600 hover:text-brand-700">{l.label}</a>
+            ) : (
+              <Link href={l.href} className="text-sm text-navy-600 hover:text-brand-700">{l.label}</Link>
+            )}
           </li>
         ))}
       </ul>

@@ -12,6 +12,8 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
+  // Absolute base for OG/twitter image URLs (src/app/opengraph-image.tsx).
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://ready2rent.netlify.app'),
   title: {
     default: 'Ready2Rent — Vacation rental turnovers, finally in sync',
     template: '%s · Ready2Rent',
@@ -25,6 +27,12 @@ export const metadata: Metadata = {
       'Calendar-synced turnover jobs, checklists and photo proof, problem reports, inventory, and payment tracking — for hosts and cleaning crews.',
     siteName: 'Ready2Rent',
     type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Ready2Rent — Vacation rental turnovers, finally in sync',
+    description:
+      'Airbnb & Vrbo calendars in, turnover jobs out — automatically. Checklists, photo proof, and payment tracking for hosts and cleaning crews.',
   },
 };
 
