@@ -37,7 +37,7 @@ export async function sendInvitationEmail(invitationId: string): Promise<void> {
       ${escapeHtml(inviter)} invited you to join Ready2Rent as the <strong>${roleWord}</strong>${ctx}.
     </p>
     <p style="font-size:14px;color:#526dac;line-height:1.5">
-      Ready2Rent keeps vacation-rental turnovers in sync — from checkout to clean, and everything in between.
+      Ready2Rent keeps vacation-rental turnovers in sync, from checkout to clean — and everything in between.
     </p>
     <div style="padding:18px 0">
       <a href="${link}" style="background:#0d9488;color:#fff;text-decoration:none;padding:11px 18px;border-radius:12px;font-weight:600;font-size:14px">Accept invitation</a>

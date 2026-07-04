@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     template: '%s · Ready2Rent',
   },
   description:
-    'Ready2Rent syncs your Airbnb and Vrbo calendars and turns reservations into scheduled cleaning jobs automatically. From checkout to clean, and everything in between.',
+    'Ready2Rent syncs your Airbnb and Vrbo calendars and turns reservations into scheduled cleaning jobs automatically. From checkout to clean — and everything in between.',
   applicationName: 'Ready2Rent',
   openGraph: {
     title: 'Ready2Rent — Vacation rental turnovers, finally in sync',

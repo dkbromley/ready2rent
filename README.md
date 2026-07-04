@@ -1,7 +1,7 @@
 # Ready2Rent
 
 **Vacation rental turnovers, finally in sync.**
-_From checkout to clean, and everything in between._
+_From checkout to clean — and everything in between._
 
 Ready2Rent sits between rental booking platforms (Airbnb, Vrbo) and the people who
 do the turnover work (cleaners, linen services). Hosts connect their booking
