@@ -56,9 +56,9 @@ export default function LandingPage() {
               <CalendarSync className="h-3.5 w-3.5" /> Airbnb &amp; Vrbo calendar sync
             </span>
             <h1 className="mt-5 text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-[3.5rem]">
-              Checkout to clean,{' '}
+              From checkout to clean —{' '}
               <span className="inline-block bg-gradient-to-r from-brand-300 to-sky-300 bg-clip-text pb-[0.12em] text-transparent">
-                without the texts.
+                and everything in between.
               </span>
             </h1>
             <p className="mt-4 max-w-xl text-lg leading-relaxed text-white/70">
@@ -384,7 +384,7 @@ export default function LandingPage() {
           <div>
             <Logo markClassName="h-6 w-6" className="text-sm text-navy-700" />
             <p className="mt-2 max-w-xs text-sm text-navy-500">
-              From checkout to clean — without the texts.
+              From checkout to clean — and everything in between.
             </p>
           </div>
           <FooterCol

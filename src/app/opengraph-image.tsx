@@ -60,8 +60,8 @@ export default function OpengraphImage() {
         {/* headline */}
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', flexDirection: 'column', fontSize: 84, fontWeight: 800, lineHeight: 1.05, letterSpacing: -2 }}>
-            <span>Checkout to clean,</span>
-            <span style={{ color: BRAND_300 }}>without the texts.</span>
+            <span>From checkout to clean —</span>
+            <span style={{ color: BRAND_300 }}>and everything in between.</span>
           </div>
           <div style={{ display: 'flex', marginTop: 28, fontSize: 32, color: 'rgba(255,255,255,0.72)' }}>
             Airbnb &amp; Vrbo calendars in, turnover jobs out — automatically.
