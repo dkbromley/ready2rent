@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { PaymentMethod, PaymentStatus, ExpenseCategory, UserRole } from '@prisma/client';
 import { format } from 'date-fns';
 import {
@@ -11,14 +12,17 @@ import {
   Receipt,
   Wallet,
   Banknote,
+  BadgeCheck,
   CalendarClock,
   ExternalLink,
+  HandCoins,
 } from 'lucide-react';
 import { Card, StatTile, EmptyState, inputClass } from '@/components/ui';
 import { SubmitButton } from '@/components/SubmitButton';
 import { cn } from '@/lib/utils';
 import {
   formatMoney,
+  paymentDeepLink,
   PAYMENT_METHODS,
   PAYMENT_METHOD_LABEL,
   PAYMENT_STATUS_META,
@@ -30,6 +34,7 @@ import {
   markPaymentPaid,
   markPaymentDue,
   deletePayment,
+  confirmPaymentReceived,
   addExpense,
   deleteExpense,
 } from '@/server/actions';
@@ -43,9 +48,15 @@ export interface PaymentRow {
   status: PaymentStatus;
   dueDate: Date | null;
   paidAt: Date | null;
+  /** Payee's "money arrived" confirmation (two-sided receipt). */
+  confirmedAt: Date | null;
   reference: string | null;
   note: string | null;
   fromJob: boolean;
+  /** Who to pay + how, from the cleaner's payout profile (null when unset). */
+  payeeName: string | null;
+  payeeMethod: PaymentMethod | null;
+  payeeHandle: string | null;
 }
 
 export interface ExpenseRow {
@@ -143,6 +154,14 @@ export function FinancialsManager({ role, properties, payments, expenses, summar
           >
             <Receipt className="h-4 w-4" /> Add expense
           </button>
+          {isCleaner && (
+            <Link
+              href="/settings/payments"
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-navy-600 ring-1 ring-inset ring-navy-200 transition hover:bg-navy-50"
+            >
+              <HandCoins className="h-4 w-4" /> How you get paid
+            </Link>
+          )}
         </div>
       ) : (
         <p className="text-sm text-navy-500">Add a property first to track its payments and expenses.</p>
@@ -255,7 +274,14 @@ export function FinancialsManager({ role, properties, payments, expenses, summar
           <EmptyState title="Nothing outstanding" description="Completed cleans with a set price show up here automatically." />
         ) : (
           <div className="space-y-2">
-            {due.map((p) => (
+            {due.map((p) => {
+              const payLink = paymentDeepLink(
+                p.payeeMethod,
+                p.payeeHandle,
+                p.amount,
+                `${p.propertyName} · Ready2Rent clean`,
+              );
+              return (
               <Card key={p.id} className="p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -265,9 +291,25 @@ export function FinancialsManager({ role, properties, payments, expenses, summar
                       {p.fromJob && ' · from a completed clean'}
                       {p.reference && ` · ${p.reference}`}
                     </p>
+                    {!isCleaner && p.payeeHandle && p.payeeMethod && (
+                      <p className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-800 ring-1 ring-inset ring-brand-600/10">
+                        <HandCoins className="h-3.5 w-3.5 text-brand-600" />
+                        {p.payeeName ?? 'Your cleaner'} · {PAYMENT_METHOD_LABEL[p.payeeMethod]}: {p.payeeHandle}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-lg font-bold tracking-tight text-navy-900">{formatMoney(p.amount)}</span>
+                    {!isCleaner && payLink && (
+                      <a
+                        href={payLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold text-brand-700 ring-1 ring-inset ring-brand-600/30 transition hover:bg-brand-50"
+                      >
+                        Pay via {PAYMENT_METHOD_LABEL[p.payeeMethod!]} <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
                     <button
                       onClick={() => setPayingId(payingId === p.id ? null : p.id)}
                       className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-b from-brand-400 to-brand-600 px-3 py-1.5 text-sm font-semibold text-white shadow-[0_8px_20px_-6px_rgba(20,184,166,0.55)] transition hover:-translate-y-px"
@@ -303,7 +345,8 @@ export function FinancialsManager({ role, properties, payments, expenses, summar
                   </form>
                 )}
               </Card>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
@@ -328,6 +371,18 @@ export function FinancialsManager({ role, properties, payments, expenses, summar
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
+                    {p.status === PaymentStatus.PAID && p.confirmedAt && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700 ring-1 ring-inset ring-brand-600/20">
+                        <BadgeCheck className="h-3.5 w-3.5" /> {isCleaner ? 'Received' : 'Confirmed by cleaner'}
+                      </span>
+                    )}
+                    {p.status === PaymentStatus.PAID && !p.confirmedAt && isCleaner && (
+                      <form action={confirmPaymentReceived.bind(null, p.id)}>
+                        <button className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold text-brand-700 ring-1 ring-inset ring-brand-600/30 transition hover:bg-brand-50">
+                          <BadgeCheck className="h-4 w-4" /> Confirm received
+                        </button>
+                      </form>
+                    )}
                     <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset', meta.chip)}>
                       <span className={cn('h-1.5 w-1.5 rounded-full', meta.dot)} /> {meta.label}
                     </span>

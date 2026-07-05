@@ -99,10 +99,14 @@ enum JobPriority {
   URGENT
 }
 
-/// Forward-compatible job kinds. Phase 1 only emits TURNOVER. Phase 2 linen
-/// tasks (pickup/wash/delivery) reuse the same job machinery + history + photos.
+/// Forward-compatible job kinds. Calendar sync emits TURNOVER. ONE_OFF /
+/// MOVE_OUT / DEEP_CLEAN are cleaner-created manual jobs (no reservation).
+/// Phase 2 linen tasks (pickup/wash/delivery) reuse the same job machinery.
 enum JobType {
   TURNOVER
+  ONE_OFF
+  MOVE_OUT
+  DEEP_CLEAN
   LINEN_PICKUP
   LINEN_WASH
   LINEN_DELIVERY
@@ -141,6 +145,13 @@ model User {
   role         UserRole @default(OWNER)
   phone        String?
   image        String?
+  /// Payout profile: how this user (a cleaner) prefers to be paid. Ready2Rent
+  /// never moves the money — hosts pay directly via the cleaner's chosen
+  /// method; these fields power the "Pay via …" buttons on payment rows.
+  payoutMethod PaymentMethod?
+  /// Handle/identifier for the payout method: @venmo-name, $cashtag, Zelle
+  /// email/phone, etc. Free text, shown to hosts who owe this user money.
+  payoutHandle String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -396,10 +407,14 @@ model Reservation {
 model TurnoverJob {
   id            String  @id @default(cuid())
   propertyId    String
-  /// One turnover job per reservation. Linen sub-tasks (Phase 2) will hang off
-  /// this via a parent relation (added later) but reuse the same status engine.
-  reservationId String  @unique
+  /// One turnover job per reservation. Null for manual jobs (one-off, move-out,
+  /// deep clean) that a cleaner schedules by hand — those reuse the exact same
+  /// status engine, checklists, photos, and payment flow.
+  reservationId String? @unique
   type          JobType @default(TURNOVER)
+  /// Per-job price override (whole dollars). Manual jobs are priced here; when
+  /// null the property's cleaningPrice is used for the auto-created payment.
+  price         Int?
 
   assignedOrganizationId String?
   assignedUserId         String?
@@ -434,7 +449,7 @@ model TurnoverJob {
   updatedAt   DateTime  @updatedAt
 
   property             Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  reservation          Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  reservation          Reservation?  @relation(fields: [reservationId], references: [id], onDelete: Cascade)
   assignedOrganization Organization? @relation("JobAssignedOrg", fields: [assignedOrganizationId], references: [id])
   assignedUser         User?         @relation("JobAssignee", fields: [assignedUserId], references: [id])
 
@@ -721,6 +736,9 @@ model Payment {
   status          PaymentStatus  @default(DUE)
   dueDate         DateTime?
   paidAt          DateTime?
+  /// Set when the payee (cleaner) confirms the money actually arrived — the
+  /// second half of the two-sided receipt. Cleared if the payment reverts to DUE.
+  confirmedAt     DateTime?
   /// Free-text reference: Venmo handle, Zelle memo, confirmation code, etc.
   reference       String?
   note            String?

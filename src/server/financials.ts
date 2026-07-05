@@ -37,8 +37,21 @@ function loadPayments(propertyIds: string[]) {
   return prisma.payment.findMany({
     where: { propertyId: { in: propertyIds } },
     include: {
-      property: { select: { name: true, calendarColor: true } },
-      job: { select: { id: true, checkoutDateTime: true } },
+      property: {
+        select: {
+          name: true,
+          calendarColor: true,
+          // Fallback payee when the job carries no specific assignee.
+          assignedCleanerUser: { select: { name: true, payoutMethod: true, payoutHandle: true } },
+        },
+      },
+      job: {
+        select: {
+          id: true,
+          checkoutDateTime: true,
+          assignedUser: { select: { name: true, payoutMethod: true, payoutHandle: true } },
+        },
+      },
     },
     orderBy: [{ status: 'asc' }, { dueDate: 'desc' }, { createdAt: 'desc' }],
   });

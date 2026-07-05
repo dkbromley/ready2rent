@@ -7,19 +7,27 @@ export default async function FinancialsPage() {
   const user = await requireUser();
   const data = await getFinancials(user);
 
-  const payments = data.payments.map((p) => ({
-    id: p.id,
-    propertyId: p.propertyId,
-    propertyName: p.property.name,
-    amount: p.amount,
-    method: p.method,
-    status: p.status,
-    dueDate: p.dueDate,
-    paidAt: p.paidAt,
-    reference: p.reference,
-    note: p.note,
-    fromJob: p.jobId != null,
-  }));
+  const payments = data.payments.map((p) => {
+    // Payee = the job's specific assignee, else the property's standing cleaner.
+    const payee = p.job?.assignedUser ?? p.property.assignedCleanerUser;
+    return {
+      id: p.id,
+      propertyId: p.propertyId,
+      propertyName: p.property.name,
+      amount: p.amount,
+      method: p.method,
+      status: p.status,
+      dueDate: p.dueDate,
+      paidAt: p.paidAt,
+      confirmedAt: p.confirmedAt,
+      reference: p.reference,
+      note: p.note,
+      fromJob: p.jobId != null,
+      payeeName: payee?.name ?? null,
+      payeeMethod: payee?.payoutMethod ?? null,
+      payeeHandle: payee?.payoutHandle ?? null,
+    };
+  });
 
   const expenses = data.expenses.map((e) => ({
     id: e.id,

@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
-import { CalendarPlatform, ExpenseCategory, JobStatus, PaymentMethod, PaymentStatus, UserRole } from '@prisma/client';
+import { CalendarPlatform, ExpenseCategory, JobStatus, JobType, PaymentMethod, PaymentStatus, UserRole } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { encryptSecret, hashFeedUrl, normalizeFeedUrl } from '@/lib/crypto';
 import {
@@ -21,6 +21,7 @@ import { notify } from '@/server/notifications';
 import { notifyOwnerOfJob } from '@/server/owner-notify';
 import { applyInvitationAcceptance, sendInvitationEmail } from '@/server/invitations';
 import { detectPlatformFromUrl } from '@/lib/feeds';
+import { resolveLocalDateTime } from '@/lib/datetime';
 import { storePropertyImage, storeReceipt, deleteStoredFile } from '@/lib/storage';
 import { MAX_IMAGE_BYTES, ALLOWED_IMAGE_TYPES } from '@/lib/limits';
 
@@ -913,14 +914,16 @@ async function ensurePaymentForJob(jobId: string): Promise<void> {
   if (existing) return;
   const job = await prisma.turnoverJob.findUnique({
     where: { id: jobId },
-    select: { id: true, propertyId: true, completedAt: true, property: { select: { cleaningPrice: true } } },
+    select: { id: true, propertyId: true, completedAt: true, price: true, property: { select: { cleaningPrice: true } } },
   });
-  if (!job || job.property.cleaningPrice == null || job.property.cleaningPrice <= 0) return;
+  // Per-job price (manual jobs) wins over the property's standing cleaning price.
+  const amount = job?.price ?? job?.property.cleaningPrice;
+  if (!job || amount == null || amount <= 0) return;
   await prisma.payment.create({
     data: {
       propertyId: job.propertyId,
       jobId: job.id,
-      amount: job.property.cleaningPrice,
+      amount,
       status: PaymentStatus.DUE,
       dueDate: job.completedAt ?? new Date(),
     },
@@ -996,7 +999,10 @@ export async function markPaymentDue(paymentId: string) {
   const payment = await prisma.payment.findUnique({ where: { id: paymentId }, select: { propertyId: true } });
   if (!payment) throw new Error('Payment not found.');
   if (!(await canAccessProperty(user, payment.propertyId))) throw new Error('Not authorized.');
-  await prisma.payment.update({ where: { id: paymentId }, data: { status: PaymentStatus.DUE, paidAt: null } });
+  await prisma.payment.update({
+    where: { id: paymentId },
+    data: { status: PaymentStatus.DUE, paidAt: null, confirmedAt: null },
+  });
   revalidatePath('/financials');
   revalidatePath('/dashboard');
 }
@@ -1123,4 +1129,223 @@ export async function changePassword(
   const passwordHash = await bcrypt.hash(newPassword, 10);
   await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
   return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// Payout profiles & payment confirmation.
+// Payment freedom is the product stance: Ready2Rent never moves the money and
+// never takes a cut. Cleaners say how they want to be paid; hosts pay them
+// directly; both sides confirm — the ledger is ours, the money never is.
+// ---------------------------------------------------------------------------
+
+const payoutSchema = z.object({
+  payoutMethod: z.preprocess(
+    (v) => (v === '' || v == null ? undefined : v),
+    z.nativeEnum(PaymentMethod).optional(),
+  ),
+  payoutHandle: z.string().trim().max(120).optional().or(z.literal('')),
+});
+
+/** Save how the signed-in user prefers to be paid (method + handle). */
+export async function updatePayoutProfile(formData: FormData) {
+  const user = await requireUser();
+  const parsed = payoutSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) throw new Error(parsed.error.errors[0]?.message ?? 'Invalid payout profile');
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      payoutMethod: parsed.data.payoutMethod ?? null,
+      payoutHandle: parsed.data.payoutHandle?.trim() || null,
+    },
+  });
+  revalidatePath('/settings/payments');
+  revalidatePath('/financials');
+}
+
+/** Payee's side of the two-sided receipt: confirm a PAID payment arrived. */
+export async function confirmPaymentReceived(paymentId: string) {
+  const user = await requireUser();
+  const payment = await prisma.payment.findUnique({
+    where: { id: paymentId },
+    select: { propertyId: true, status: true },
+  });
+  if (!payment) throw new Error('Payment not found.');
+  if (payment.status !== PaymentStatus.PAID) throw new Error('Only paid payments can be confirmed.');
+  if (!(await canAccessProperty(user, payment.propertyId))) throw new Error('Not authorized.');
+  await prisma.payment.update({ where: { id: paymentId }, data: { confirmedAt: new Date() } });
+  revalidatePath('/financials');
+}
+
+// ---------------------------------------------------------------------------
+// Team management (cleaning companies)
+// ---------------------------------------------------------------------------
+
+/** The caller's cleaning-company membership, or null if they have none. */
+async function cleaningOrgMembership(userId: string) {
+  return prisma.organizationMember.findFirst({
+    where: { userId, organization: { type: 'CLEANING_COMPANY' } },
+    select: { organizationId: true, role: true },
+  });
+}
+
+/** Invite a cleaner to join the caller's cleaning company as a team member.
+ * Accepting (existing account or via signup) joins them to the org, which puts
+ * org-assigned jobs on their schedule. */
+export async function inviteTeamMember(formData: FormData) {
+  const user = await requireRole(UserRole.CLEANER, UserRole.ADMIN);
+  const email = z
+    .string()
+    .email('Enter a valid email')
+    .parse(String(formData.get('email') ?? '').trim().toLowerCase());
+
+  const membership = await cleaningOrgMembership(user.id);
+  if (!membership) throw new Error('No cleaning company found for this account.');
+  if (membership.role === 'MEMBER') {
+    throw new Error('Only the company owner or a manager can invite teammates.');
+  }
+
+  const dupe = await prisma.invitation.findFirst({
+    where: { email, organizationId: membership.organizationId, propertyId: null, status: 'PENDING' },
+  });
+  if (dupe) {
+    await sendInvitationEmail(dupe.id);
+  } else {
+    const invitation = await prisma.invitation.create({
+      data: {
+        email,
+        invitedRole: UserRole.CLEANER,
+        invitedByUserId: user.id,
+        organizationId: membership.organizationId,
+        propertyId: null,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
+    });
+    await sendInvitationEmail(invitation.id);
+  }
+  revalidatePath('/cleaner/team');
+}
+
+/** Hand a specific org-assigned job to a specific teammate ('' = back to the
+ * shared pool). Only jobs assigned to the caller's cleaning company qualify. */
+export async function assignJobToMember(formData: FormData) {
+  const user = await requireRole(UserRole.CLEANER, UserRole.ADMIN);
+  const jobId = String(formData.get('jobId') ?? '');
+  const memberUserId = String(formData.get('memberUserId') ?? '');
+
+  const membership = await cleaningOrgMembership(user.id);
+  if (!membership) throw new Error('No cleaning company found for this account.');
+
+  const job = await prisma.turnoverJob.findUnique({
+    where: { id: jobId },
+    select: { assignedOrganizationId: true },
+  });
+  if (!job || job.assignedOrganizationId !== membership.organizationId) {
+    throw new Error('Not authorized.');
+  }
+  if (memberUserId) {
+    const target = await prisma.organizationMember.findFirst({
+      where: { organizationId: membership.organizationId, userId: memberUserId },
+    });
+    if (!target) throw new Error('That person is not on your team.');
+  }
+  await prisma.turnoverJob.update({
+    where: { id: jobId },
+    data: { assignedUserId: memberUserId || null },
+  });
+  revalidatePath('/cleaner/team');
+  revalidatePath('/cleaner');
+  revalidatePath(`/jobs/${jobId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Manual jobs (one-off / move-out / deep cleans) — no reservation behind them,
+// same status engine, photos, and payment flow as calendar-synced turnovers.
+// ---------------------------------------------------------------------------
+
+const manualJobSchema = z.object({
+  mode: z.enum(['existing', 'new']),
+  propertyId: z.string().optional(),
+  clientName: z.string().trim().max(160).optional().or(z.literal('')),
+  clientAddress: z.string().trim().max(240).optional().or(z.literal('')),
+  clientCity: z.string().trim().max(120).optional().or(z.literal('')),
+  clientState: z.string().trim().max(60).optional().or(z.literal('')),
+  type: z.enum(['ONE_OFF', 'MOVE_OUT', 'DEEP_CLEAN']),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Pick a date'),
+  startTime: z.string().regex(/^\d{1,2}:\d{2}$/).default('10:00'),
+  price: z.preprocess(
+    (v) => (v === '' || v == null ? undefined : v),
+    z.coerce.number().int().min(0).max(100000).optional(),
+  ),
+  notes: z.string().max(2000).optional().or(z.literal('')),
+});
+
+/** Schedule a one-off / move-out / deep clean, on an existing property or for
+ * a new client (which quick-creates a minimal cleaner-managed property record
+ * — no calendar feed, no owner-claim emails). */
+export async function createManualJob(formData: FormData) {
+  const user = await requireRole(UserRole.CLEANER, UserRole.ADMIN);
+  const parsed = manualJobSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) throw new Error(parsed.error.errors[0]?.message ?? 'Invalid job');
+  const d = parsed.data;
+
+  const membership = await cleaningOrgMembership(user.id);
+
+  let propertyId: string;
+  let timezone: string;
+  if (d.mode === 'existing') {
+    if (!d.propertyId) throw new Error('Pick a property.');
+    if (!(await canAccessProperty(user, d.propertyId))) throw new Error('Not authorized.');
+    const prop = await prisma.property.findUnique({
+      where: { id: d.propertyId },
+      select: { timezone: true },
+    });
+    if (!prop) throw new Error('Property not found.');
+    propertyId = d.propertyId;
+    timezone = prop.timezone;
+  } else {
+    if (!membership) throw new Error('No cleaning company found for this account.');
+    const clientName = d.clientName?.trim();
+    if (!clientName) throw new Error('Client name is required.');
+    const prop = await prisma.property.create({
+      data: {
+        name: clientName,
+        address: d.clientAddress?.trim() || null,
+        city: d.clientCity?.trim() || null,
+        state: d.clientState?.trim() || null,
+        ownerOrganizationId: membership.organizationId,
+        managementMode: 'CLEANER_MANAGED',
+        createdByUserId: user.id,
+        assignedCleanerOrganizationId: membership.organizationId,
+        assignedCleanerUserId: user.id,
+      },
+    });
+    propertyId = prop.id;
+    timezone = prop.timezone;
+  }
+
+  // The date input is a plain calendar day; resolve start time as wall-clock
+  // in the property's timezone (isAllDay: read Y/M/D from the UTC-midnight day).
+  const checkout = resolveLocalDateTime(new Date(`${d.date}T00:00:00Z`), d.startTime, timezone, true);
+
+  const job = await prisma.turnoverJob.create({
+    data: {
+      propertyId,
+      type: d.type as JobType,
+      price: d.price ?? null,
+      checkoutDateTime: checkout,
+      nextCheckInDateTime: null,
+      sameDayTurnover: false,
+      status: JobStatus.SCHEDULED,
+      cleanerNotes: d.notes?.trim() || null,
+      assignedOrganizationId: membership?.organizationId ?? null,
+      assignedUserId: user.id,
+      statusHistory: {
+        create: { toStatus: JobStatus.SCHEDULED, changedByUserId: user.id, note: 'Manual job created' },
+      },
+    },
+  });
+
+  revalidatePath('/cleaner');
+  revalidatePath('/jobs');
+  redirect(`/jobs/${job.id}`);
 }

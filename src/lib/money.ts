@@ -16,6 +16,31 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   OTHER: 'Other',
 };
 
+/**
+ * Best-effort deep link that opens the payer's payment app with the cleaner's
+ * handle (and, where supported, amount + note) prefilled. Ready2Rent never
+ * touches the money — this is a shortcut into the app both sides already use.
+ * Returns null for methods with no linkable web scheme (Zelle, Apple Pay,
+ * cash) — for those the UI shows the handle as text instead.
+ */
+export function paymentDeepLink(
+  method: PaymentMethod | null,
+  handle: string | null,
+  amount: number,
+  note: string,
+): string | null {
+  const h = handle?.trim().replace(/^[@$]/, '');
+  if (!h) return null;
+  switch (method) {
+    case PaymentMethod.VENMO:
+      return `https://venmo.com/${encodeURIComponent(h)}?txn=pay&amount=${amount}&note=${encodeURIComponent(note)}`;
+    case PaymentMethod.CASH_APP:
+      return `https://cash.app/$${encodeURIComponent(h)}/${amount}`;
+    default:
+      return null;
+  }
+}
+
 /** Order shown in method pickers. */
 export const PAYMENT_METHODS: PaymentMethod[] = [
   PaymentMethod.APPLE_PAY,

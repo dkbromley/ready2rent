@@ -1,4 +1,4 @@
-import { JobStatus, ReservationStatus, JobPriority, SyncStatus } from '@prisma/client';
+import { JobStatus, JobType, ReservationStatus, JobPriority, SyncStatus } from '@prisma/client';
 
 /** Display metadata for job/reservation/sync states — single source of truth. */
 
@@ -94,3 +94,18 @@ export function formatTurnoverWindow(minutes: number | null): string {
   if (m === 0) return `${h}h window`;
   return `${h}h ${m}m window`;
 }
+
+/** Display metadata for job kinds. TURNOVER (the calendar-synced default) is
+ * unbadged in most UI; manual kinds get a visible chip. */
+export const JOB_TYPE_META: Record<JobType, { label: string; chip: string }> = {
+  TURNOVER: { label: 'Turnover', chip: 'bg-brand-50 text-brand-700 ring-brand-600/20' },
+  ONE_OFF: { label: 'One-off clean', chip: 'bg-sky-50 text-sky-700 ring-sky-600/20' },
+  MOVE_OUT: { label: 'Move-out', chip: 'bg-violet-50 text-violet-700 ring-violet-600/20' },
+  DEEP_CLEAN: { label: 'Deep clean', chip: 'bg-amber-50 text-amber-700 ring-amber-600/20' },
+  LINEN_PICKUP: { label: 'Linen pickup', chip: 'bg-navy-50 text-navy-600 ring-navy-600/10' },
+  LINEN_WASH: { label: 'Linen wash', chip: 'bg-navy-50 text-navy-600 ring-navy-600/10' },
+  LINEN_DELIVERY: { label: 'Linen delivery', chip: 'bg-navy-50 text-navy-600 ring-navy-600/10' },
+};
+
+/** Manual job kinds a cleaner can schedule by hand (no reservation). */
+export const MANUAL_JOB_TYPES: JobType[] = [JobType.ONE_OFF, JobType.MOVE_OUT, JobType.DEEP_CLEAN];
