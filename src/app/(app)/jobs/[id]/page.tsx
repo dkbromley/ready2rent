@@ -25,7 +25,7 @@ import { JobPhotos } from '@/components/JobPhotos';
 import { JobChecklist } from '@/components/JobChecklist';
 import { ProblemReport } from '@/components/ProblemReport';
 import { formatInTz } from '@/lib/datetime';
-import { formatTurnoverWindow, JOB_STATUS_META } from '@/lib/status';
+import { formatTurnoverWindow, JOB_STATUS_META, JOB_TYPE_META } from '@/lib/status';
 
 export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -60,6 +60,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         subtitle={[job.property.city, job.property.state].filter(Boolean).join(', ') || undefined}
         action={
           <div className="flex items-center gap-2">
+            {job.type !== 'TURNOVER' && (
+              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${JOB_TYPE_META[job.type].chip}`}>
+                {JOB_TYPE_META[job.type].label}
+              </span>
+            )}
             {job.sameDayTurnover && <SameDayBadge />}
             <PriorityBadge priority={job.priority} />
             <JobStatusBadge status={job.status} />
@@ -168,47 +173,48 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           </Card>
 
           {/* Booking details — populated by richer providers; iCal fills what it
-              can parse. Hidden entirely when nothing is available. */}
-          {(job.reservation.guestName ||
-            job.reservation.guestCount != null ||
-            job.reservation.confirmationCode ||
-            job.reservation.guestPhoneLast4 ||
-            job.reservation.reservationUrl) && (
+              can parse. Hidden entirely when nothing is available (including
+              manual jobs, which have no reservation at all). */}
+          {job.reservation != null && (job.reservation.guestName ||
+            job.reservation!.guestCount != null ||
+            job.reservation!.confirmationCode ||
+            job.reservation!.guestPhoneLast4 ||
+            job.reservation!.reservationUrl) && (
             <Card>
               <SectionTitle>Booking details</SectionTitle>
               <dl className="space-y-2 text-sm">
-                {job.reservation.guestName && (
+                {job.reservation!.guestName && (
                   <div className="flex items-center gap-2 text-navy-700">
-                    <Users className="h-4 w-4 text-navy-400" /> {job.reservation.guestName}
+                    <Users className="h-4 w-4 text-navy-400" /> {job.reservation!.guestName}
                   </div>
                 )}
-                {job.reservation.guestCount != null && (
+                {job.reservation!.guestCount != null && (
                   <div className="flex items-center gap-2 text-navy-700">
-                    <Users className="h-4 w-4 text-navy-400" /> {job.reservation.guestCount} guest{job.reservation.guestCount === 1 ? '' : 's'}
+                    <Users className="h-4 w-4 text-navy-400" /> {job.reservation!.guestCount} guest{job.reservation!.guestCount === 1 ? '' : 's'}
                   </div>
                 )}
-                {job.reservation.confirmationCode && (
+                {job.reservation!.confirmationCode && (
                   <div className="flex items-center gap-2 text-navy-700">
-                    <Hash className="h-4 w-4 text-navy-400" /> {job.reservation.confirmationCode}
+                    <Hash className="h-4 w-4 text-navy-400" /> {job.reservation!.confirmationCode}
                   </div>
                 )}
-                {job.reservation.guestPhoneLast4 && (
+                {job.reservation!.guestPhoneLast4 && (
                   <div className="flex items-center gap-2 text-navy-700">
-                    <Phone className="h-4 w-4 text-navy-400" /> ••• {job.reservation.guestPhoneLast4}
+                    <Phone className="h-4 w-4 text-navy-400" /> ••• {job.reservation!.guestPhoneLast4}
                   </div>
                 )}
-                {job.reservation.reservationUrl && (
+                {job.reservation!.reservationUrl && (
                   <a
-                    href={job.reservation.reservationUrl}
+                    href={job.reservation!.reservationUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-2 font-medium text-brand-700 hover:underline"
                   >
-                    <ExternalLink className="h-4 w-4" /> View on {job.reservation.sourcePlatform.toLowerCase()}
+                    <ExternalLink className="h-4 w-4" /> View on {job.reservation!.sourcePlatform.toLowerCase()}
                   </a>
                 )}
               </dl>
-              {!job.reservation.hasExactTimes && (
+              {!job.reservation!.hasExactTimes && (
                 <p className="mt-3 text-xs text-navy-400">
                   Times shown use the property's default check-in/out (this source provides dates only).
                 </p>

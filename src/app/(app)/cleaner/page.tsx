@@ -81,6 +81,12 @@ export default async function CleanerDashboardPage() {
               <CalendarDays className="h-4 w-4" /> Calendar
             </LinkButton>
             <Link
+              href="/cleaner/jobs/new"
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white ring-1 ring-inset ring-white/25 transition hover:bg-white/10"
+            >
+              <Plus className="h-4 w-4" /> New job
+            </Link>
+            <Link
               href="/cleaner/properties/new"
               className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white ring-1 ring-inset ring-white/25 transition hover:bg-white/10"
             >

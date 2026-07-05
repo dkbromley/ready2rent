@@ -1,15 +1,17 @@
 import Link from 'next/link';
 import { LogOut, LogIn, MapPin, Timer } from 'lucide-react';
-import type { JobStatus, JobPriority } from '@prisma/client';
+import type { JobStatus, JobPriority, JobType } from '@prisma/client';
 import { JobStatusBadge, SameDayBadge } from '@/components/StatusBadge';
 import { formatInTz } from '@/lib/datetime';
-import { formatTurnoverWindow } from '@/lib/status';
+import { formatTurnoverWindow, JOB_TYPE_META } from '@/lib/status';
 import { cn } from '@/lib/utils';
 
 export interface JobCardData {
   id: string;
   status: JobStatus;
   priority: JobPriority;
+  /** Manual kinds (one-off / move-out / deep clean) get a visible chip. */
+  type?: JobType;
   checkoutDateTime: Date;
   nextCheckInDateTime: Date | null;
   sameDayTurnover: boolean;
@@ -63,6 +65,11 @@ export function JobCard({ job, compact = false }: { job: JobCardData; compact?: 
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
+        {job.type && job.type !== 'TURNOVER' && (
+          <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset', JOB_TYPE_META[job.type].chip)}>
+            {JOB_TYPE_META[job.type].label}
+          </span>
+        )}
         <span className="inline-flex items-center gap-1 rounded-full bg-navy-50 px-2.5 py-0.5 text-xs font-medium text-navy-600">
           <Timer className="h-3 w-3" />
           {formatTurnoverWindow(job.turnoverWindowMinutes)}

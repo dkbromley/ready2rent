@@ -42,6 +42,7 @@ const NAV: NavItem[] = [
   { href: '/cleaner', label: 'My jobs', icon: <Sparkles className="h-5 w-5" />, roles: [UserRole.CLEANER, UserRole.ADMIN], primary: true },
   { href: '/cleaner/calendar', label: 'Calendar', icon: <CalendarDays className="h-5 w-5" />, roles: [UserRole.CLEANER, UserRole.ADMIN], primary: true },
   { href: '/cleaner/properties', label: 'Properties', icon: <Home className="h-5 w-5" />, roles: [UserRole.CLEANER, UserRole.ADMIN], primary: true },
+  { href: '/cleaner/team', label: 'Team', icon: <Users className="h-5 w-5" />, roles: [UserRole.CLEANER] },
   { href: '/financials', label: 'Financials', icon: <Wallet className="h-5 w-5" />, roles: [UserRole.OWNER, UserRole.CLEANER, UserRole.ADMIN] },
   { href: '/archive', label: 'Archive', icon: <Archive className="h-5 w-5" />, roles: [UserRole.OWNER, UserRole.CLEANER, UserRole.ADMIN], primary: true },
   { href: '/analytics', label: 'Analytics', icon: <BarChart3 className="h-5 w-5" />, roles: [UserRole.OWNER] },

@@ -146,7 +146,7 @@ export default function LandingPage() {
             <Feature art={<ChecklistArt />} title="Checklists" desc="Per-property checklists so nothing gets skipped — cleaners tick items off as they go." />
             <Feature art={<PhotoProofArt />} title="Photo proof & problems" desc="Completion photos and problem reports with images, so hosts see the state of every clean." />
             <Feature art={<LinensArt />} title="Inventory" desc="Track linens and supplies per property, with low-stock par levels." />
-            <Feature art={<PaymentsArt />} title="Payment tracking" desc="Know what's due and paid per property and per clean — Apple Pay, Venmo, Cash App, Zelle." />
+            <Feature art={<PaymentsArt />} title="Payments, zero fees" desc="Every clean logs what's due; settle it your way — Venmo, Zelle, Cash App, cash. The money never passes through us." />
           </div>
         </section>
 
@@ -163,7 +163,12 @@ export default function LandingPage() {
               icon={<Brush className="h-5 w-5" />}
               tag="For cleaners"
               title="Your whole schedule, synced"
-              points={['See every turnover with its exact window', 'Checklists and photo upload on your phone', 'Track what you’re owed across every property']}
+              points={[
+                'See every turnover with its exact window',
+                'One-off, move-out & deep cleans on the same schedule',
+                'Checklists and photo upload on your phone',
+                'Get paid your way — never a fee on your pay',
+              ]}
             />
           </div>
         </section>
@@ -222,59 +227,131 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ---- Pricing ---- */}
-      <section id="pricing" className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
+      {/* ---- Payment freedom ---- */}
+      <section className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-bold uppercase tracking-wider text-brand-600">Pricing</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-brand-600">Your money is yours</p>
           <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-navy-900">
-            Free for cleaners. Fair for hosts.
+            We charge for software — never a cut of your pay
           </h2>
           <p className="mt-3 text-navy-500">
-            Ready2Rent is in early access — everything below is free right now. Sign up today and
-            you lock in early-access pricing when billing launches.
+            Other platforms skim processing fees off every clean, hold payouts, and bill cleaners for
+            background checks. Ready2Rent never touches the money.
           </p>
         </div>
         <div className="mt-10 grid gap-5 md:grid-cols-3">
-          <PricingCard
-            tag="Cleaning crews"
-            price="Free"
-            cadence="forever"
-            blurb="If you do the turnovers, you never pay."
-            points={[
-              'Every job with its exact window',
-              'Checklists & photo upload on your phone',
-              'Track what you’re owed, per host',
-              'Invite your hosts — they’ll thank you',
-            ]}
-            cta="Join free"
+          <Feature
+            art={<PaymentsArt />}
+            title="Paid your way"
+            desc="Cleaners set how they want to be paid — Venmo, Zelle, Cash App, Apple Pay, or cash — and every payment a host owes shows that handle."
           />
-          <PricingCard
-            tag="Hosts · Starter"
-            price="Free"
-            cadence="1 property"
-            blurb="The full turnover engine for your first door."
-            points={[
-              'Airbnb & Vrbo calendar sync',
-              'Same-day turnover alerts',
-              'Checklists, photo proof & problem reports',
-              'Payment tracking',
-            ]}
-            cta="Start free"
+          <Feature
+            art={<JobTicketArt />}
+            title="One tap to pay, zero fees"
+            desc="Hosts get a Pay button that opens their payment app with the amount and note prefilled. No processing fees, no payout holds, no middleman."
           />
-          <PricingCard
-            highlight
-            tag="Hosts · Pro"
-            price="$9"
-            cadence="per property / month"
-            blurb="Every door you manage — capped at $49/mo, no matter how many."
-            points={[
-              'Everything in Starter, unlimited properties',
-              'Financials: expenses, receipts & statements',
-              'Inventory with low-stock alerts',
-              'Priority support',
-            ]}
-            cta="Start free"
+          <Feature
+            art={<PhotoProofArt />}
+            title="Two-sided receipts"
+            desc="Host marks it paid, cleaner confirms it arrived — a payment log tied to the job and its photo proof. Evidence beats escrow."
           />
+        </div>
+        <p className="mx-auto mt-8 flex max-w-2xl flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-navy-500">
+          {['No payment processing fees', 'No payout holds', 'No charging cleaners for background checks'].map((t) => (
+            <span key={t} className="inline-flex items-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4 text-brand-500" /> {t}
+            </span>
+          ))}
+        </p>
+      </section>
+
+      {/* ---- Pricing ---- */}
+      <section id="pricing" className="border-t border-sand-200 bg-surface">
+        <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-xs font-bold uppercase tracking-wider text-brand-600">Pricing</p>
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-navy-900">
+              Software fees, not wage fees.
+            </h2>
+            <p className="mt-3 text-navy-500">
+              Ready2Rent is in early access — everything below is free right now. Sign up today and
+              you lock in early-access pricing when billing launches.
+            </p>
+          </div>
+
+          <p className="mt-10 text-xs font-bold uppercase tracking-wider text-navy-400">For cleaning pros</p>
+          <div className="mt-3 grid gap-5 md:grid-cols-3">
+            <PricingCard
+              tag="Cleaners · Free"
+              price="$0"
+              cadence="forever"
+              blurb="Everything involved in working with your hosts. Never a fee to get paid."
+              points={[
+                'Turnovers synced from host calendars',
+                'Checklists & photo proof on your phone',
+                'Track what you’re owed, per host',
+                'Payout profile — get paid your way',
+              ]}
+              cta="Join free"
+            />
+            <PricingCard
+              highlight
+              tag="Cleaners · Pro"
+              price="$12"
+              cadence="per month"
+              blurb="Everything involved in running your business."
+              points={[
+                'Everything in Free',
+                'One-off, move-out & deep cleans with per-job pricing',
+                'Client scheduling beyond vacation rentals',
+                'Business page & booking requests (coming soon)',
+              ]}
+              cta="Start free"
+            />
+            <PricingCard
+              tag="Crew"
+              price="$39"
+              cadence="per month, whole team"
+              blurb="For cleaning companies: run the roster, own your Saturday."
+              points={[
+                'Everything in Pro for every teammate',
+                'Invite your team & hand off jobs',
+                'Per-cleaner cleans and earnings',
+                'Turnover Day board & run sheets (coming soon)',
+              ]}
+              cta="Start free"
+            />
+          </div>
+
+          <p className="mt-10 text-xs font-bold uppercase tracking-wider text-navy-400">For hosts</p>
+          <div className="mt-3 grid gap-5 md:grid-cols-2">
+            <PricingCard
+              tag="Hosts · Starter"
+              price="Free"
+              cadence="1 property"
+              blurb="The full turnover engine for your first door."
+              points={[
+                'Airbnb & Vrbo calendar sync',
+                'Same-day turnover alerts',
+                'Checklists, photo proof & problem reports',
+                'Payment tracking with one-tap pay',
+              ]}
+              cta="Start free"
+            />
+            <PricingCard
+              tag="Hosts · Pro"
+              price="$9"
+              cadence="per property / month"
+              blurb="Every door you manage — capped at $49/mo, no matter how many."
+              points={[
+                'Everything in Starter, unlimited properties',
+                'Financials: expenses, receipts & statements',
+                'Inventory with low-stock alerts',
+                'Priority support',
+              ]}
+              cta="Start free"
+            />
+          </div>
         </div>
       </section>
 
@@ -341,15 +418,27 @@ export default function LandingPage() {
             reports from their phone, and track what they&rsquo;re owed across every host they work
             with. Cleaners can even add properties and invite their hosts.
           </Faq>
-          <Faq q="Does it handle payments?">
-            Completing a clean automatically logs a payment due from the property&rsquo;s cleaning
-            price, and both sides see what&rsquo;s outstanding and paid — whether you settle by Apple
-            Pay, Venmo, Cash App, Zelle, or cash. Automatic payouts are on the roadmap.
+          <Faq q="Does it handle payments? Do you take a cut?">
+            We track, you pay — and we never take a cut. Completing a clean automatically logs a
+            payment due, the cleaner&rsquo;s payout profile tells the host how they like to be paid
+            (Venmo, Zelle, Cash App, Apple Pay, cash), and Venmo/Cash App handles become one-tap Pay
+            buttons with the amount prefilled. The host marks it paid, the cleaner confirms it
+            arrived, and the receipt lives next to the job&rsquo;s photo proof. No processing fees,
+            no payout holds, ever.
+          </Faq>
+          <Faq q="Can I run my cleaning team on it?">
+            Yes. Invite teammates to your cleaning company by email, hand any job to a specific
+            cleaner, and see per-person cleans and earnings for the month. Each teammate gets their
+            own schedule, checklists, and photo upload — and one-off, move-out, and deep cleans
+            live on the same calendar as your turnovers.
           </Faq>
           <Faq q="What does it cost?">
-            During early access, everything is free. Planned pricing: free forever for cleaners, free
-            for a host&rsquo;s first property, then $9 per property per month capped at $49 — and
-            early-access users lock in their pricing when billing launches.
+            During early access, everything is free. Planned pricing: cleaners are free forever for
+            everything involved in working with hosts; Cleaner Pro is $12/month for
+            business features like one-off client jobs; Crew is $39/month flat for a whole cleaning
+            company. Hosts: first property free, then $9 per property per month capped at $49.
+            Early-access users lock in their pricing when billing launches — and no plan ever takes
+            a percentage of a payment.
           </Faq>
         </div>
       </section>

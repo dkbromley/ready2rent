@@ -6,6 +6,7 @@ import {
   startOfToday,
   startOfWeek,
   endOfWeek,
+  startOfMonth,
   eachDayOfInterval,
   isSameDay,
   format,
@@ -234,6 +235,79 @@ export async function getCleanerDashboard(user: SessionUser) {
   ]);
 
   return { todays, todaysAll, tomorrows, thisWeek, sameDay, problems, weekly, activity };
+}
+
+/**
+ * Team read model for a cleaning company: members with this-month stats,
+ * pending team invites, and the org's upcoming jobs (for per-member handoff).
+ * Returns null when the user has no cleaning-company org.
+ */
+export async function getCleanerTeam(user: SessionUser) {
+  const membership = await prisma.organizationMember.findFirst({
+    where: { userId: user.id, organization: { type: 'CLEANING_COMPANY' } },
+    include: { organization: { select: { id: true, name: true } } },
+  });
+  if (!membership) return null;
+  const orgId = membership.organizationId;
+  const monthStart = startOfMonth(new Date());
+  const today = startOfToday();
+
+  const [members, pendingInvites, upcoming, completed] = await Promise.all([
+    prisma.organizationMember.findMany({
+      where: { organizationId: orgId },
+      include: {
+        user: { select: { id: true, name: true, email: true, payoutMethod: true, payoutHandle: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    }),
+    prisma.invitation.findMany({
+      where: { organizationId: orgId, propertyId: null, invitedRole: UserRole.CLEANER, status: 'PENDING' },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    }),
+    // The org's live queue for the next 2 weeks — the assignment worklist.
+    prisma.turnoverJob.findMany({
+      where: {
+        assignedOrganizationId: orgId,
+        status: { in: [JobStatus.NEEDS_SCHEDULING, JobStatus.SCHEDULED, JobStatus.IN_PROGRESS] },
+        checkoutDateTime: { gte: today, lte: endOfDay(addDays(today, 14)) },
+      },
+      include: {
+        property: { select: { name: true, timezone: true } },
+        assignedUser: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { checkoutDateTime: 'asc' },
+      take: 30,
+    }),
+    // Completed this month, for per-member counts + value.
+    prisma.turnoverJob.findMany({
+      where: { assignedOrganizationId: orgId, status: JobStatus.COMPLETED, completedAt: { gte: monthStart } },
+      select: { assignedUserId: true, price: true, property: { select: { cleaningPrice: true } } },
+    }),
+  ]);
+
+  const statsByUser = new Map<string, { cleans: number; value: number }>();
+  for (const j of completed) {
+    const key = j.assignedUserId ?? '';
+    const s = statsByUser.get(key) ?? { cleans: 0, value: 0 };
+    s.cleans += 1;
+    s.value += j.price ?? j.property.cleaningPrice ?? 0;
+    statsByUser.set(key, s);
+  }
+
+  return {
+    org: membership.organization,
+    myRole: membership.role,
+    members: members.map((m) => ({
+      id: m.id,
+      role: m.role,
+      user: m.user,
+      thisMonth: statsByUser.get(m.user.id) ?? { cleans: 0, value: 0 },
+    })),
+    pendingInvites,
+    upcoming,
+    unassignedThisMonth: statsByUser.get('') ?? { cleans: 0, value: 0 },
+  };
 }
 
 /** Properties a cleaner manages or is assigned to (for the cleaner property list). */
