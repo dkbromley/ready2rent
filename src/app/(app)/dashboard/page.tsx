@@ -144,7 +144,7 @@ export default async function DashboardPage() {
         <TodayTimeline jobs={d.todaysJobs} />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <section className="lg:col-span-2">
           <SectionTitle action={<Link href="/jobs" className="text-xs font-medium text-brand-700 hover:underline">View all</Link>}>
             Upcoming checkouts
