@@ -1,11 +1,13 @@
+import Link from 'next/link';
 import { UserRole, MemberRole } from '@prisma/client';
-import { Mail, UserPlus, Users, HandCoins, CircleCheck } from 'lucide-react';
+import { Mail, UserPlus, Users, HandCoins, CircleCheck, Circle, Building2 } from 'lucide-react';
 import { requireRole } from '@/lib/rbac';
 import { getCleanerTeam } from '@/server/queries';
-import { inviteTeamMember, assignJobToMember, revokeInvitation } from '@/server/actions';
-import { PageHeader, Card, SectionTitle, EmptyState, inputClass } from '@/components/ui';
+import { inviteTeamMember, assignJobToMember, revokeInvitation, updateBusinessProfile } from '@/server/actions';
+import { PageHeader, Card, SectionTitle, EmptyState, inputClass, Field } from '@/components/ui';
 import { SubmitButton } from '@/components/SubmitButton';
 import { JobStatusBadge, SameDayBadge } from '@/components/StatusBadge';
+import { MemberActions } from './MemberActions';
 import { formatMoney, PAYMENT_METHOD_LABEL } from '@/lib/money';
 import { formatInTz } from '@/lib/datetime';
 import { cn } from '@/lib/utils';
@@ -33,6 +35,15 @@ export default async function TeamPage() {
   }
 
   const canManage = team.myRole !== MemberRole.MEMBER;
+  const isOwner = team.myRole === MemberRole.OWNER;
+
+  const setupSteps = [
+    { done: team.setup.hasDetails, label: 'Fill in your business details', href: '#business' },
+    { done: team.setup.hasPayout, label: 'Set how you get paid', href: '/settings/payments' },
+    { done: team.setup.hasTeammate, label: 'Invite your first teammate', href: '#invite' },
+    { done: team.setup.hasAssignment, label: 'Hand a job to a teammate', href: '#worklist' },
+  ];
+  const setupDone = setupSteps.filter((s) => s.done).length;
 
   return (
     <div>
@@ -41,6 +52,38 @@ export default async function TeamPage() {
         title="Your team"
         subtitle="Who's on the crew, what they've done this month, and who's taking each clean."
       />
+
+      {/* Crew setup — hides itself once every step is done. */}
+      {canManage && setupDone < setupSteps.length && (
+        <Card className="mb-6">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-500">
+              Crew setup
+            </h2>
+            <span className="text-xs font-bold text-brand-700">{setupDone}/{setupSteps.length} done</span>
+          </div>
+          <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+            {setupSteps.map((s) => (
+              <li key={s.label}>
+                {s.done ? (
+                  <span className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm text-navy-400">
+                    <CircleCheck className="h-4 w-4 shrink-0 text-brand-500" />
+                    <span className="line-through">{s.label}</span>
+                  </span>
+                ) : (
+                  <Link
+                    href={s.href}
+                    className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-semibold text-navy-800 transition hover:bg-brand-50 hover:text-brand-800"
+                  >
+                    <Circle className="h-4 w-4 shrink-0 text-navy-300" />
+                    {s.label} →
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <section className="space-y-6 lg:col-span-2">
@@ -79,6 +122,14 @@ export default async function TeamPage() {
                       ? `${PAYMENT_METHOD_LABEL[m.user.payoutMethod]}: ${m.user.payoutHandle}`
                       : 'No payout profile yet'}
                   </p>
+                  {isOwner && (
+                    <MemberActions
+                      memberId={m.id}
+                      memberName={m.user.name ?? m.user.email}
+                      currentRole={m.role}
+                      isSelf={m.user.id === user.id}
+                    />
+                  )}
                 </Card>
               ))}
             </div>
@@ -92,7 +143,7 @@ export default async function TeamPage() {
           </div>
 
           {/* Assignment worklist */}
-          <div>
+          <div id="worklist" className="scroll-mt-24">
             <SectionTitle>Next two weeks — who&rsquo;s taking what</SectionTitle>
             {team.upcoming.length === 0 ? (
               <Card className="text-sm text-navy-500">No upcoming jobs assigned to your company.</Card>
@@ -145,7 +196,39 @@ export default async function TeamPage() {
         {/* Invite rail */}
         <div className="space-y-6">
           {canManage && (
-            <Card>
+            <Card className="scroll-mt-24" id="business">
+              <div className="mb-3 flex items-center gap-2">
+                <span className="inline-flex rounded-xl bg-brand-50 p-2 text-brand-700 ring-1 ring-inset ring-brand-600/15">
+                  <Building2 className="h-4 w-4" />
+                </span>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-500">Business details</h2>
+              </div>
+              <form action={updateBusinessProfile} className="space-y-3">
+                <Field label="Business name">
+                  <input name="name" required maxLength={160} defaultValue={team.org.name} className={inputClass} />
+                </Field>
+                <Field label="Phone (optional)">
+                  <input name="phone" maxLength={40} defaultValue={team.profile?.phone ?? ''} className={inputClass} placeholder="(910) 555-0134" />
+                </Field>
+                <Field label="Service areas" hint="Comma-separated — shown to hosts (and on your business page later).">
+                  <input
+                    name="serviceAreas"
+                    maxLength={400}
+                    defaultValue={team.profile?.serviceAreas.join(', ') ?? ''}
+                    className={inputClass}
+                    placeholder="Sunset Beach, Ocean Isle Beach, Holden Beach"
+                  />
+                </Field>
+                <Field label="About your business (optional)">
+                  <textarea name="bio" rows={3} maxLength={1000} defaultValue={team.profile?.bio ?? ''} className={inputClass} placeholder="Family-run crew serving the Brunswick Islands since 2019…" />
+                </Field>
+                <SubmitButton pendingText="Saving…">Save details</SubmitButton>
+              </form>
+            </Card>
+          )}
+
+          {canManage && (
+            <Card className="scroll-mt-24" id="invite">
               <SectionTitle>Invite a teammate</SectionTitle>
               <p className="mb-3 text-sm text-navy-500">
                 They join {team.org.name}, see the jobs you hand them, and track their own schedule —
