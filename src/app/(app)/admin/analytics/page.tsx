@@ -36,7 +36,7 @@ export default async function AdminAnalyticsPage() {
         <StatTile icon={<Percent className="h-5 w-5" />} tone="green" label="Feed sync health" value={`${syncRate}%`} />
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <SectionTitle>Completed per week</SectionTitle>
           <TrendChart data={t.weekly} />

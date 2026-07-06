@@ -73,7 +73,7 @@ export function DetailSkeleton() {
           </div>
         ))}
       </div>
-      <div className="mt-8 grid gap-6 lg:grid-cols-3">
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-3 lg:col-span-2">
           <CardSkeleton lines={4} />
           <CardSkeleton lines={4} />

@@ -30,7 +30,7 @@ export default async function OwnerAnalyticsPage() {
             <StatTile icon={<Wrench className="h-5 w-5" />} tone="amber" label="Problems" value={a.problems} />
           </div>
 
-          <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card>
               <SectionTitle>Completed per week</SectionTitle>
               <TrendChart data={a.weekly} />
