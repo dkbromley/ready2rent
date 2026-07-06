@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { greetingForHour } from '@/lib/greeting';
 
 /**
  * The hero's date eyebrow + time-of-day greeting, rendered from the browser's
@@ -47,11 +48,4 @@ export function DashboardGreeting({
       </h1>
     </>
   );
-}
-
-export function greetingForHour(hour: number): string {
-  if (hour < 5) return 'Up early';
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
 }
