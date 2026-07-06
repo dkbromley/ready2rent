@@ -777,6 +777,14 @@ export async function markAllNotificationsRead() {
 /** Save the current user's per-category notification opt-outs (checkbox form). */
 export async function updateNotificationPreferences(formData: FormData) {
   const user = await requireUser();
+
+  // Mobile number for schedule texts (SMS transport lands later; the number
+  // is collected now so onboarding can complete). Loose format, 7+ digits.
+  const phone = String(formData.get('phone') ?? '').trim();
+  if (phone && !(/^[+()\-.\s\d]{7,40}$/.test(phone) && phone.replace(/\D/g, '').length >= 7)) {
+    throw new Error('Enter a valid phone number.');
+  }
+
   // Unchecked checkboxes are absent from the form → false.
   const on = (key: string) => formData.get(key) != null;
   const data = {
@@ -787,11 +795,14 @@ export async function updateNotificationPreferences(formData: FormData) {
     sameDayTurnover: on('sameDayTurnover'),
     problems: on('problems'),
   };
-  await prisma.notificationPreference.upsert({
-    where: { userId: user.id },
-    create: { userId: user.id, ...data },
-    update: data,
-  });
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: user.id }, data: { phone: phone || null } }),
+    prisma.notificationPreference.upsert({
+      where: { userId: user.id },
+      create: { userId: user.id, ...data },
+      update: data,
+    }),
+  ]);
   revalidatePath('/settings/notifications');
 }
 

@@ -3,7 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { requireUser } from '@/lib/rbac';
 import { prisma } from '@/lib/prisma';
 import { updateNotificationPreferences } from '@/server/actions';
-import { PageHeader, Card } from '@/components/ui';
+import { PageHeader, Card, Field, inputClass } from '@/components/ui';
 import { SubmitButton } from '@/components/SubmitButton';
 
 const CATEGORIES: { key: string; label: string; desc: string }[] = [
@@ -17,7 +17,10 @@ const CATEGORIES: { key: string; label: string; desc: string }[] = [
 
 export default async function NotificationSettingsPage() {
   const user = await requireUser();
-  const prefs = await prisma.notificationPreference.findUnique({ where: { userId: user.id } });
+  const [prefs, me] = await Promise.all([
+    prisma.notificationPreference.findUnique({ where: { userId: user.id } }),
+    prisma.user.findUnique({ where: { id: user.id }, select: { phone: true } }),
+  ]);
   // No row yet = everything on (opt-out model).
   const value = (key: string): boolean =>
     prefs ? (prefs as unknown as Record<string, boolean>)[key] ?? true : true;
@@ -34,6 +37,21 @@ export default async function NotificationSettingsPage() {
 
       <Card>
         <form action={updateNotificationPreferences} className="space-y-1">
+          <div className="mb-4 border-b border-sand-100 p-3 pb-5">
+            <Field
+              label="Mobile number (optional)"
+              hint="Where schedule texts will go — same-day turnovers, changes, problems. Text alerts aren't live yet; adding your number now means they reach you the moment they launch."
+            >
+              <input
+                name="phone"
+                type="tel"
+                maxLength={40}
+                defaultValue={me?.phone ?? ''}
+                placeholder="(910) 555-0134"
+                className={inputClass}
+              />
+            </Field>
+          </div>
           {CATEGORIES.map((c) => (
             <label
               key={c.key}
