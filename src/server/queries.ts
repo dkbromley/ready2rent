@@ -263,7 +263,7 @@ export async function getCleanerTeam(user: SessionUser) {
       where: { organizationId: orgId },
       include: {
         user: { select: { id: true, name: true, email: true, payoutMethod: true, payoutHandle: true } },
-        onboardingChecks: { select: { itemId: true } },
+        onboardingChecks: { select: { itemId: true, checkedAt: true, checkedByUserId: true } },
       },
       orderBy: { createdAt: 'asc' },
     }),
@@ -313,6 +313,9 @@ export async function getCleanerTeam(user: SessionUser) {
     statsByUser.set(key, s);
   }
 
+  // "Checked by" attribution — checkers are owners/managers, i.e. members.
+  const nameByUserId = new Map(members.map((m) => [m.user.id, m.user.name ?? m.user.email]));
+
   return {
     org: membership.organization,
     myRole: membership.role,
@@ -321,8 +324,17 @@ export async function getCleanerTeam(user: SessionUser) {
       id: m.id,
       role: m.role,
       user: m.user,
+      joinedAt: m.createdAt,
       thisMonth: statsByUser.get(m.user.id) ?? { cleans: 0, value: 0 },
-      checkedItemIds: new Set(m.onboardingChecks.map((c) => c.itemId)),
+      checks: new Map(
+        m.onboardingChecks.map((c) => [
+          c.itemId,
+          {
+            checkedAt: c.checkedAt,
+            checkedByName: c.checkedByUserId ? (nameByUserId.get(c.checkedByUserId) ?? null) : null,
+          },
+        ]),
+      ),
     })),
     onboardingItems,
     pendingInvites,
