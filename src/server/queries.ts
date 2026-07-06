@@ -1,18 +1,11 @@
 import { JobStatus, Prisma, ReservationStatus, SyncStatus, UserRole } from '@prisma/client';
-import {
-  startOfDay,
-  endOfDay,
-  addDays,
-  startOfToday,
-  startOfWeek,
-  endOfWeek,
-  startOfMonth,
-  eachDayOfInterval,
-  isSameDay,
-  format,
-} from 'date-fns';
+import { startOfMonth } from 'date-fns';
 import { prisma } from '@/lib/prisma';
 import { getUserOrgIds, type SessionUser } from '@/lib/rbac';
+import { startOfLocalDay, localDayKey } from '@/lib/datetime';
+
+// Single-letter weekday labels, Monday-first (matches weeklyTurnoverSeries).
+const WEEKDAY_INITIALS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 export interface ActivityItem {
   id: string;
@@ -23,19 +16,28 @@ export interface ActivityItem {
   createdAt: Date;
 }
 
-/** Turnovers per day for the current week (Mon–Sun), server-local buckets. */
-async function weeklyTurnoverSeries(where: Prisma.TurnoverJobWhereInput) {
-  const start = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const end = endOfWeek(new Date(), { weekStartsOn: 1 });
+/** Turnovers per day for the current week (Mon–Sun) in the user's timezone. */
+async function weeklyTurnoverSeries(where: Prisma.TurnoverJobWhereInput, tz: string) {
+  const todayKey = localDayKey(new Date(), tz);
+  // Day-of-week of the local today (0=Sun..6=Sat) → offset to Monday.
+  const dow = new Date(`${todayKey}T00:00:00Z`).getUTCDay();
+  const mondayOffset = dow === 0 ? -6 : 1 - dow;
+
+  const weekStart = startOfLocalDay(tz, mondayOffset);
+  const weekEnd = startOfLocalDay(tz, mondayOffset + 7); // exclusive
   const jobs = await prisma.turnoverJob.findMany({
-    where: { ...where, checkoutDateTime: { gte: start, lte: end } },
+    where: { ...where, checkoutDateTime: { gte: weekStart, lt: weekEnd } },
     select: { checkoutDateTime: true },
   });
-  return eachDayOfInterval({ start, end }).map((d) => ({
-    label: format(d, 'EEEEE'),
-    count: jobs.filter((j) => isSameDay(j.checkoutDateTime, d)).length,
-    isToday: isSameDay(d, new Date()),
-  }));
+
+  return WEEKDAY_INITIALS.map((label, i) => {
+    const dayKey = localDayKey(startOfLocalDay(tz, mondayOffset + i), tz);
+    return {
+      label,
+      count: jobs.filter((j) => localDayKey(j.checkoutDateTime, tz) === dayKey).length,
+      isToday: dayKey === todayKey,
+    };
+  });
 }
 
 /** Most recent job status transitions in scope — the "did it happen?" feed. */
@@ -80,11 +82,12 @@ export async function getOwnerScopePropertyIds(user: SessionUser): Promise<strin
   return props.map((p) => p.id);
 }
 
-export async function getOwnerDashboard(user: SessionUser) {
-  const now = new Date();
-  const todayStart = startOfDay(now);
-  const todayEnd = endOfDay(now);
-  const weekEnd = endOfDay(addDays(now, 7));
+export async function getOwnerDashboard(user: SessionUser, tz: string) {
+  // Day boundaries in the user's timezone, as UTC instants: today, tomorrow
+  // (today's exclusive end), and the end of the 7-day window (day 8's start).
+  const todayStart = startOfLocalDay(tz, 0);
+  const tomorrowStart = startOfLocalDay(tz, 1);
+  const weekEnd = startOfLocalDay(tz, 8);
 
   // Scope every query by the property relation so there's no serial pre-fetch —
   // all of these run concurrently in one round of parallel queries.
@@ -110,7 +113,7 @@ export async function getOwnerDashboard(user: SessionUser) {
     prisma.turnoverJob.findMany({
       where: {
         property: propScope,
-        checkoutDateTime: { gte: todayStart, lte: weekEnd },
+        checkoutDateTime: { gte: todayStart, lt: weekEnd },
         status: { in: [JobStatus.NEEDS_SCHEDULING, JobStatus.SCHEDULED] },
       },
       include: { property: true, reservation: true },
@@ -119,7 +122,7 @@ export async function getOwnerDashboard(user: SessionUser) {
     }),
     // Everything happening today, whatever its state — feeds the timeline.
     prisma.turnoverJob.findMany({
-      where: { ...jobScope, checkoutDateTime: { gte: todayStart, lte: todayEnd } },
+      where: { ...jobScope, checkoutDateTime: { gte: todayStart, lt: tomorrowStart } },
       include: { property: true },
       orderBy: { checkoutDateTime: 'asc' },
       take: 10,
@@ -142,7 +145,7 @@ export async function getOwnerDashboard(user: SessionUser) {
     }),
     prisma.turnoverJob.count({ where: { property: propScope, status: JobStatus.IN_PROGRESS } }),
     prisma.turnoverJob.count({
-      where: { property: propScope, status: JobStatus.COMPLETED, completedAt: { gte: todayStart, lte: todayEnd } },
+      where: { property: propScope, status: JobStatus.COMPLETED, completedAt: { gte: todayStart, lt: tomorrowStart } },
     }),
     prisma.calendarFeed.findMany({
       where: { property: propScope, lastSyncStatus: SyncStatus.FAILED },
@@ -150,7 +153,7 @@ export async function getOwnerDashboard(user: SessionUser) {
       take: 8,
     }),
     prisma.property.count({ where: propScope }),
-    weeklyTurnoverSeries({ property: propScope }),
+    weeklyTurnoverSeries({ property: propScope }, tz),
     recentActivity({ property: propScope }),
   ]);
 
@@ -176,12 +179,13 @@ export async function getCleanerJobScope(user: SessionUser) {
   };
 }
 
-export async function getCleanerDashboard(user: SessionUser) {
+export async function getCleanerDashboard(user: SessionUser, tz: string) {
   const scope = await getCleanerJobScope(user);
-  const today = startOfToday();
-  const tomorrowStart = startOfDay(addDays(today, 1));
-  const tomorrowEnd = endOfDay(addDays(today, 1));
-  const weekEnd = endOfDay(addDays(today, 7));
+  // Day boundaries in the user's timezone, as UTC instants (exclusive ends).
+  const today = startOfLocalDay(tz, 0);
+  const tomorrowStart = startOfLocalDay(tz, 1);
+  const dayAfterTomorrow = startOfLocalDay(tz, 2);
+  const weekEnd = startOfLocalDay(tz, 8);
 
   const liveStatuses = [
     JobStatus.NEEDS_SCHEDULING,
@@ -192,7 +196,7 @@ export async function getCleanerDashboard(user: SessionUser) {
 
   const [todays, todaysAll, tomorrows, thisWeek, sameDay, problems] = await Promise.all([
     prisma.turnoverJob.findMany({
-      where: { ...scope, status: { in: liveStatuses }, checkoutDateTime: { gte: today, lte: endOfDay(today) } },
+      where: { ...scope, status: { in: liveStatuses }, checkoutDateTime: { gte: today, lt: tomorrowStart } },
       include: { property: true },
       orderBy: { checkoutDateTime: 'asc' },
     }),
@@ -201,19 +205,19 @@ export async function getCleanerDashboard(user: SessionUser) {
       where: {
         ...scope,
         status: { not: JobStatus.CANCELED },
-        checkoutDateTime: { gte: today, lte: endOfDay(today) },
+        checkoutDateTime: { gte: today, lt: tomorrowStart },
       },
       include: { property: true },
       orderBy: { checkoutDateTime: 'asc' },
       take: 10,
     }),
     prisma.turnoverJob.findMany({
-      where: { ...scope, status: { in: liveStatuses }, checkoutDateTime: { gte: tomorrowStart, lte: tomorrowEnd } },
+      where: { ...scope, status: { in: liveStatuses }, checkoutDateTime: { gte: tomorrowStart, lt: dayAfterTomorrow } },
       include: { property: true },
       orderBy: { checkoutDateTime: 'asc' },
     }),
     prisma.turnoverJob.findMany({
-      where: { ...scope, status: { in: liveStatuses }, checkoutDateTime: { gte: today, lte: weekEnd } },
+      where: { ...scope, status: { in: liveStatuses }, checkoutDateTime: { gte: today, lt: weekEnd } },
       include: { property: true },
       orderBy: { checkoutDateTime: 'asc' },
     }),
@@ -230,7 +234,7 @@ export async function getCleanerDashboard(user: SessionUser) {
   ]);
 
   const [weekly, activity] = await Promise.all([
-    weeklyTurnoverSeries(scope),
+    weeklyTurnoverSeries(scope, tz),
     recentActivity(scope),
   ]);
 
@@ -250,7 +254,9 @@ export async function getCleanerTeam(user: SessionUser) {
   if (!membership) return null;
   const orgId = membership.organizationId;
   const monthStart = startOfMonth(new Date());
-  const today = startOfToday();
+  // Rough 2-week worklist window; day-granular, so the app-default zone is fine.
+  const today = startOfLocalDay(DEFAULT_TIMEZONE, 0);
+  const worklistEnd = startOfLocalDay(DEFAULT_TIMEZONE, 15);
 
   const [members, pendingInvites, upcoming, completed, profile, me, onboardingItems] = await Promise.all([
     prisma.organizationMember.findMany({
@@ -271,7 +277,7 @@ export async function getCleanerTeam(user: SessionUser) {
       where: {
         assignedOrganizationId: orgId,
         status: { in: [JobStatus.NEEDS_SCHEDULING, JobStatus.SCHEDULED, JobStatus.IN_PROGRESS] },
-        checkoutDateTime: { gte: today, lte: endOfDay(addDays(today, 14)) },
+        checkoutDateTime: { gte: today, lt: worklistEnd },
       },
       include: {
         property: { select: { name: true, timezone: true } },
@@ -532,4 +538,14 @@ export async function getAdminOverview() {
 
 export async function getUnreadNotificationCount(userId: string) {
   return prisma.notification.count({ where: { userId, read: false } });
+}
+
+/** The user's saved IANA timezone, or the app default when unset. Matches
+ * Property.timezone's default so a brand-new account reads as Eastern until
+ * the browser detection saves the real zone. */
+export const DEFAULT_TIMEZONE = 'America/New_York';
+
+export async function getUserTimezone(userId: string): Promise<string> {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { timezone: true } });
+  return u?.timezone || DEFAULT_TIMEZONE;
 }

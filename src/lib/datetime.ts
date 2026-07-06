@@ -70,6 +70,29 @@ export function isSameLocalDay(a: Date, b: Date, timezone: string): boolean {
   return localDayKey(a, timezone) === localDayKey(b, timezone);
 }
 
+/**
+ * UTC instant for the start (local midnight) of the calendar day that is
+ * `offsetDays` from today, in `timezone`. offset 0 = today, 1 = tomorrow,
+ * -6 = six days ago. Used to bucket dashboards by the user's local day rather
+ * than the server's. Whole-day offsets read through the day key, so a DST
+ * transition never lands the boundary on the wrong date.
+ */
+export function startOfLocalDay(timezone: string, offsetDays = 0, ref: Date = new Date()): Date {
+  const shifted = new Date(ref.getTime() + offsetDays * 86_400_000);
+  const key = localDayKey(shifted, timezone);
+  return fromZonedTime(`${key}T00:00:00.000`, timezone);
+}
+
+/** True if `tz` is a valid IANA timezone name (defends the detect→save path). */
+export function isValidTimezone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Whole minutes between two instants (b - a). Negative if b precedes a. */
 export function diffMinutes(a: Date, b: Date): number {
   return Math.round((b.getTime() - a.getTime()) / 60000);

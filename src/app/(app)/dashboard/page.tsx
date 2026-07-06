@@ -3,9 +3,11 @@ import { redirect } from 'next/navigation';
 import { JobStatus, UserRole } from '@prisma/client';
 import { AlertTriangle, ArrowRight, Plus, Play, CircleCheck, Building2, Wallet } from 'lucide-react';
 import { requireUser } from '@/lib/rbac';
-import { getOwnerDashboard } from '@/server/queries';
+import { getOwnerDashboard, getUserTimezone } from '@/server/queries';
 import { getOutstandingForUser } from '@/server/financials';
 import { getOwnerOnboarding } from '@/server/onboarding';
+import { greetingForHour } from '@/components/dashboard/DashboardGreeting';
+import { toZonedTime } from 'date-fns-tz';
 import { OnboardingChecklist } from '@/components/OnboardingChecklist';
 import { formatMoney } from '@/lib/money';
 import { PageHeader, StatTile, SectionTitle, EmptyState, LinkButton, Card } from '@/components/ui';
@@ -21,17 +23,17 @@ export default async function DashboardPage() {
   const user = await requireUser();
   if (user.role === UserRole.CLEANER) redirect('/cleaner');
 
+  const tz = await getUserTimezone(user.id);
   const [d, outstanding, onboarding] = await Promise.all([
-    getOwnerDashboard(user),
+    getOwnerDashboard(user, tz),
     getOutstandingForUser(user),
     getOwnerOnboarding(user),
   ]);
 
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
+  // Server fallbacks in the user's saved timezone; the hero refines to the
+  // exact device clock client-side.
+  const today = formatInTz(new Date(), tz, 'EEEE, MMMM d');
+  const greeting = greetingForHour(toZonedTime(new Date(), tz).getHours());
 
   // One triage list instead of scattered banners.
   const attention: AttentionItem[] = [
@@ -96,6 +98,7 @@ export default async function DashboardPage() {
         <DashboardHero
           name={user.name}
           dateLabel={today}
+          greeting={greeting}
           summary={summary}
           doneToday={doneToday}
           totalToday={totalToday}

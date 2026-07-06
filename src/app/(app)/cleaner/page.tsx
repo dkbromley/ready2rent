@@ -2,10 +2,12 @@ import Link from 'next/link';
 import { Plus, CalendarDays, Sun, CalendarPlus, AlertTriangle, Wallet } from 'lucide-react';
 import { requireRole } from '@/lib/rbac';
 import { JobStatus, UserRole } from '@prisma/client';
-import { getCleanerDashboard } from '@/server/queries';
+import { getCleanerDashboard, getUserTimezone } from '@/server/queries';
 import { getOutstandingForUser } from '@/server/financials';
 import { prisma } from '@/lib/prisma';
 import { formatMoney } from '@/lib/money';
+import { greetingForHour } from '@/components/dashboard/DashboardGreeting';
+import { toZonedTime } from 'date-fns-tz';
 import { StatTile, SectionTitle, EmptyState, Card, LinkButton } from '@/components/ui';
 import { JobCard } from '@/components/JobCard';
 import { WeeklyChart } from '@/components/WeeklyChart';
@@ -17,17 +19,16 @@ import { formatInTz } from '@/lib/datetime';
 
 export default async function CleanerDashboardPage() {
   const user = await requireRole(UserRole.CLEANER, UserRole.ADMIN);
+  const tz = await getUserTimezone(user.id);
   const [d, owed, me] = await Promise.all([
-    getCleanerDashboard(user),
+    getCleanerDashboard(user, tz),
     getOutstandingForUser(user),
     prisma.user.findUnique({ where: { id: user.id }, select: { payoutMethod: true, payoutHandle: true } }),
   ]);
 
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
+  // Server fallbacks in the user's saved timezone; the hero refines client-side.
+  const today = formatInTz(new Date(), tz, 'EEEE, MMMM d');
+  const greeting = greetingForHour(toZonedTime(new Date(), tz).getHours());
 
   const attention: AttentionItem[] = [
     ...d.problems.map((j) => ({
@@ -89,6 +90,7 @@ export default async function CleanerDashboardPage() {
       <DashboardHero
         name={user.name}
         dateLabel={today}
+        greeting={greeting}
         summary={summary}
         doneToday={doneToday}
         totalToday={totalToday}

@@ -21,7 +21,7 @@ import { notify } from '@/server/notifications';
 import { notifyOwnerOfJob } from '@/server/owner-notify';
 import { applyInvitationAcceptance, sendInvitationEmail } from '@/server/invitations';
 import { detectPlatformFromUrl } from '@/lib/feeds';
-import { resolveLocalDateTime } from '@/lib/datetime';
+import { resolveLocalDateTime, isValidTimezone } from '@/lib/datetime';
 import { storePropertyImage, storeReceipt, deleteStoredFile, deleteReceipt } from '@/lib/storage';
 import { MAX_IMAGE_BYTES, ALLOWED_IMAGE_TYPES } from '@/lib/limits';
 
@@ -1587,4 +1587,20 @@ export async function toggleTeamOnboardingCheck(formData: FormData) {
     });
   }
   revalidatePath('/cleaner/team');
+}
+
+// ---------------------------------------------------------------------------
+// Per-user timezone (auto-detected from the browser)
+// ---------------------------------------------------------------------------
+
+/** Persist the viewer's detected IANA timezone. Called by the client
+ * TimezoneSync component only when the detected zone differs from the stored
+ * one, so this is a rare write. Silently ignores invalid zone strings. */
+export async function saveUserTimezone(timezone: string): Promise<void> {
+  const user = await requireUser();
+  const tz = String(timezone || '').trim();
+  if (!tz || tz.length > 64 || !isValidTimezone(tz)) return;
+  await prisma.user.update({ where: { id: user.id }, data: { timezone: tz } });
+  revalidatePath('/dashboard');
+  revalidatePath('/cleaner');
 }

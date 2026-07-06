@@ -1,13 +1,19 @@
 import { CalendarCheck2 } from 'lucide-react';
+import { DashboardGreeting } from './DashboardGreeting';
 
 /**
  * The dashboard's greeting band: time-of-day greeting, a one-sentence summary
  * of the day, role-specific quick actions, and a progress ring of today's
  * cleans. The one ocean-brand surface inside the app.
+ *
+ * The date + greeting are rendered client-side (DashboardGreeting) so they
+ * track the viewer's real local time; `dateLabel`/`greeting` are the
+ * server-computed fallbacks (in the user's saved timezone).
  */
 export function DashboardHero({
   name,
   dateLabel,
+  greeting,
   summary,
   doneToday,
   totalToday,
@@ -15,25 +21,18 @@ export function DashboardHero({
 }: {
   name: string | null | undefined;
   dateLabel: string;
+  greeting: string;
   summary: string;
   doneToday: number;
   totalToday: number;
   actions?: React.ReactNode;
 }) {
-  const hour = new Date().getHours();
-  const greeting = hour < 5 ? 'Up early' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  const firstName = name?.trim().split(/\s+/)[0];
-
   return (
     <div className="ocean-hero ocean-grain relative mb-6 overflow-hidden rounded-3xl">
       <div className="pointer-events-none absolute -right-14 -top-16 h-52 w-52 rounded-full bg-brand-400/20 blur-3xl" />
       <div className="relative flex flex-col justify-between gap-6 px-6 py-6 sm:flex-row sm:items-center sm:px-8">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wider text-brand-200">{dateLabel}</p>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
-            {greeting}
-            {firstName ? `, ${firstName}` : ''}
-          </h1>
+          <DashboardGreeting name={name} fallbackDate={dateLabel} fallbackGreeting={greeting} />
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/70">{summary}</p>
           {actions && <div className="mt-5 flex flex-wrap items-center gap-3">{actions}</div>}
         </div>
