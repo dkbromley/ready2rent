@@ -4,6 +4,7 @@ import { requireRole } from '@/lib/rbac';
 import { JobStatus, UserRole } from '@prisma/client';
 import { getCleanerDashboard } from '@/server/queries';
 import { getOutstandingForUser } from '@/server/financials';
+import { prisma } from '@/lib/prisma';
 import { formatMoney } from '@/lib/money';
 import { StatTile, SectionTitle, EmptyState, Card, LinkButton } from '@/components/ui';
 import { JobCard } from '@/components/JobCard';
@@ -16,7 +17,11 @@ import { formatInTz } from '@/lib/datetime';
 
 export default async function CleanerDashboardPage() {
   const user = await requireRole(UserRole.CLEANER, UserRole.ADMIN);
-  const [d, owed] = await Promise.all([getCleanerDashboard(user), getOutstandingForUser(user)]);
+  const [d, owed, me] = await Promise.all([
+    getCleanerDashboard(user),
+    getOutstandingForUser(user),
+    prisma.user.findUnique({ where: { id: user.id }, select: { payoutMethod: true, payoutHandle: true } }),
+  ]);
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -40,6 +45,18 @@ export default async function CleanerDashboardPage() {
             title: `You're owed ${formatMoney(owed)}`,
             detail: 'Track payments in Financials',
             href: '/financials',
+          },
+        ]
+      : []),
+    // No payout profile = hosts can't one-tap pay you. Nudge until it's set.
+    ...(!me?.payoutMethod || !me?.payoutHandle
+      ? [
+          {
+            id: 'payout-profile',
+            severity: 'medium' as const,
+            title: 'Set up how you get paid',
+            detail: 'Hosts see your Venmo/Zelle/Cash App handle on every payment they owe you',
+            href: '/settings/payments',
           },
         ]
       : []),

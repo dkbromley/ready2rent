@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ShieldCheck, Bell, ChevronRight } from 'lucide-react';
+import { ShieldCheck, Bell, ChevronRight, HandCoins } from 'lucide-react';
 import { requireUser } from '@/lib/rbac';
 import { PageHeader } from '@/components/ui';
 
@@ -7,6 +7,12 @@ export default async function SettingsPage() {
   const user = await requireUser();
 
   const items = [
+    {
+      href: '/settings/payments',
+      icon: <HandCoins className="h-5 w-5" />,
+      title: 'How you get paid',
+      desc: 'Your payout method and handle — shown on every payment owed to you.',
+    },
     {
       href: '/settings/security',
       icon: <ShieldCheck className="h-5 w-5" />,
