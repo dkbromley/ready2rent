@@ -84,8 +84,8 @@ export default async function NewPropertyPage() {
             </Field>
           </div>
 
-          <Field label="Notes for cleaners (optional)">
-            <textarea name="notes" rows={3} placeholder="Gate code, supply closet location, parking…" className={inputClass} />
+          <Field label="Notes for cleaners (optional)" hint="Parking, quirks, staging preferences. Put door & lockbox codes in the access fields above — those are encrypted.">
+            <textarea name="notes" rows={3} placeholder="Parking is on the north side, thermostat by the door…" className={inputClass} />
           </Field>
 
           <Field label="Property photo (optional)">

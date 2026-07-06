@@ -83,8 +83,8 @@ export default async function NewCleanerPropertyPage() {
                   <input name="ownerClosetAccess" maxLength={300} placeholder="Code 0210 · hall closet" className={inputClass} />
                 </Field>
               </div>
-              <Field label="Notes (gate codes, supply location…)">
-                <textarea name="notes" rows={2} className={inputClass} />
+              <Field label="Notes (optional)" hint="Parking, quirks, supply location. Door & lockbox codes go in the access fields above — those are encrypted.">
+                <textarea name="notes" rows={2} className={inputClass} placeholder="Parking on the north side, supplies under the sink…" />
               </Field>
             </div>
           </details>

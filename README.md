@@ -95,7 +95,8 @@ cp .env.example .env
 #   Object storage (photos, receipts) — optional; falls back to /public/uploads in dev:
 #   - NEXT_PUBLIC_SUPABASE_URL
 #   - SUPABASE_SERVICE_ROLE_KEY
-#   - SUPABASE_STORAGE_BUCKET     (default "job-photos")
+#   - SUPABASE_STORAGE_BUCKET     (default "job-photos"; PUBLIC — photos/images)
+#   - SUPABASE_RECEIPTS_BUCKET    (default "receipts"; PRIVATE — signed-URL receipts)
 #   Email — optional; invites/notifications are logged-and-skipped without these:
 #   - RESEND_API_KEY
 #   - EMAIL_FROM
@@ -202,9 +203,14 @@ src/app/p/[token]/              Public property status page (owner claim funnel)
   production — no baked-in demo credentials.
 - Cron endpoints are guarded by `CRON_SECRET`. Manual sync triggers are
   rate-limited with a per-feed cooldown.
-- **Known follow-up:** uploaded receipts currently live in the public storage
-  bucket (unguessable URLs). Moving them to a private bucket with signed URLs is a
-  tracked hardening item.
+- **Property access codes** (door/lockbox/owner's-closet) are encrypted at rest
+  (AES-256-GCM, `src/lib/crypto.ts`) and decrypted only for the access-gated
+  property/job views, never sent to the client.
+- **Expense receipts** are financial documents, so they live in a **private**
+  storage bucket (`SUPABASE_RECEIPTS_BUCKET`). Only the object path is stored;
+  the app mints a short-lived (1h) signed URL at view time, after the caller has
+  passed the property authorization check. Job photos and property images remain
+  in the public bucket.
 
 ---
 
