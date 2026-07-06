@@ -157,6 +157,50 @@ export default async function TeamPage() {
     label: m.user.name ?? m.user.email,
   }));
 
+  // Togglable checklist rows for one member. Managers get a button per row
+  // (ticking or un-ticking); everyone else sees a static list. Un-ticking a
+  // fully-onboarded member's item drops them back into "Onboarding".
+  const checklistRows = (m: (typeof membersWithProgress)[number], items: typeof team.onboardingItems) => (
+    <ul className="space-y-0.5">
+      {items.map((item) => {
+        const check = m.checks.get(item.id);
+        const row = (
+          <>
+            {check ? (
+              <CircleCheck className="h-3.5 w-3.5 shrink-0 text-brand-500" />
+            ) : (
+              <Circle className="h-3.5 w-3.5 shrink-0 text-navy-300" />
+            )}
+            <span className={cn('min-w-0 truncate text-xs', check ? 'text-navy-400 line-through' : 'text-navy-700')}>
+              {item.text}
+            </span>
+            {check && (
+              <span className="ml-auto shrink-0 text-[11px] text-navy-300">
+                {check.checkedByName ? `${check.checkedByName} · ` : ''}
+                {format(check.checkedAt, 'MMM d')}
+              </span>
+            )}
+          </>
+        );
+        return (
+          <li key={item.id}>
+            {canManage ? (
+              <form action={toggleTeamOnboardingCheck}>
+                <input type="hidden" name="itemId" value={item.id} />
+                <input type="hidden" name="memberId" value={m.id} />
+                <button className="flex w-full items-center gap-2 rounded-lg px-1.5 py-1 text-left transition hover:bg-sand-50">
+                  {row}
+                </button>
+              </form>
+            ) : (
+              <span className="flex items-center gap-2 px-1.5 py-1">{row}</span>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+
   return (
     <div>
       <PageHeader
@@ -289,55 +333,41 @@ export default async function TeamPage() {
                       </span>
                     </div>
                     <ProgressBar done={m.doneCount} total={totalItems} className="mb-3 mt-2" />
-                    <ul className="space-y-0.5">
-                      {orderedItems.map((item) => {
-                        const check = m.checks.get(item.id);
-                        const row = (
-                          <>
-                            {check ? (
-                              <CircleCheck className="h-3.5 w-3.5 shrink-0 text-brand-500" />
-                            ) : (
-                              <Circle className="h-3.5 w-3.5 shrink-0 text-navy-300" />
-                            )}
-                            <span className={cn('min-w-0 truncate text-xs', check ? 'text-navy-400 line-through' : 'text-navy-700')}>
-                              {item.text}
-                            </span>
-                            {check && (
-                              <span className="ml-auto shrink-0 text-[11px] text-navy-300">
-                                {check.checkedByName ? `${check.checkedByName} · ` : ''}
-                                {format(check.checkedAt, 'MMM d')}
-                              </span>
-                            )}
-                          </>
-                        );
-                        return (
-                          <li key={item.id}>
-                            {canManage ? (
-                              <form action={toggleTeamOnboardingCheck}>
-                                <input type="hidden" name="itemId" value={item.id} />
-                                <input type="hidden" name="memberId" value={m.id} />
-                                <button className="flex w-full items-center gap-2 rounded-lg px-1.5 py-1 text-left transition hover:bg-sand-50">
-                                  {row}
-                                </button>
-                              </form>
-                            ) : (
-                              <span className="flex items-center gap-2 px-1.5 py-1">{row}</span>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
+                    {checklistRows(m, orderedItems)}
                   </div>
                 );
               })}
 
               {(fullyOnboarded.length > 0 || totalItems === 0) && (
-                <div className="flex flex-wrap items-center gap-3 px-5 py-4">
-                  <Chip className="bg-brand-50 text-brand-700 ring-brand-600/20">Active</Chip>
-                  <span className="inline-flex min-w-0 items-center gap-1.5 text-sm font-medium text-brand-700 dark:text-brand-400">
-                    <CircleCheck className="h-4 w-4 shrink-0" />
-                    <span className="min-w-0">{activeLine}</span>
-                  </span>
+                <div className="px-5 py-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Chip className="bg-brand-50 text-brand-700 ring-brand-600/20">Active</Chip>
+                    <span className="inline-flex min-w-0 items-center gap-1.5 text-sm font-medium text-brand-700 dark:text-brand-400">
+                      <CircleCheck className="h-4 w-4 shrink-0" />
+                      <span className="min-w-0">{activeLine}</span>
+                    </span>
+                  </div>
+
+                  {/* Reach a completed member's checklist to fix an accidental
+                      tick — un-checking drops them back into Onboarding. */}
+                  {canManage && totalItems > 0 && fullyOnboarded.length > 0 && (
+                    <details className="group mt-3">
+                      <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-semibold text-navy-400 [&::-webkit-details-marker]:hidden">
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-180" />
+                        Adjust a completed checklist
+                      </summary>
+                      <div className="mt-2 space-y-3">
+                        {fullyOnboarded.map((m) => (
+                          <div key={m.id} className="rounded-xl bg-sand-50 p-2">
+                            <p className="px-1.5 pb-1 text-xs font-semibold text-navy-700">
+                              {m.user.name ?? m.user.email}
+                            </p>
+                            {checklistRows(m, team.onboardingItems)}
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
                 </div>
               )}
 
