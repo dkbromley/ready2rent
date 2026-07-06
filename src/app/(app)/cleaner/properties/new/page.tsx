@@ -60,7 +60,12 @@ export default async function NewCleanerPropertyPage() {
           <details className="rounded-xl border border-navy-100 p-4">
             <summary className="cursor-pointer text-sm font-medium text-navy-700">Address &amp; details (optional)</summary>
             <div className="mt-4 space-y-4">
-              <Field label="Street address"><input name="address" className={inputClass} /></Field>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2">
+                  <Field label="Street address"><input name="address" className={inputClass} /></Field>
+                </div>
+                <Field label="Unit #"><input name="unitNumber" maxLength={40} placeholder="4B" className={inputClass} /></Field>
+              </div>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                 <Field label="City"><input name="city" className={inputClass} /></Field>
                 <Field label="State"><input name="state" className={inputClass} /></Field>
@@ -69,6 +74,14 @@ export default async function NewCleanerPropertyPage() {
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Bedrooms"><input name="bedrooms" type="number" min={0} defaultValue={0} className={inputClass} /></Field>
                 <Field label="Bathrooms"><input name="bathrooms" type="number" min={0} defaultValue={0} className={inputClass} /></Field>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Main door access" hint="Lockbox/door code, or where the key is.">
+                  <input name="mainDoorAccess" maxLength={300} placeholder="Lockbox 4521 on the rail" className={inputClass} />
+                </Field>
+                <Field label="Owner's closet access" hint="Code, or where that key lives.">
+                  <input name="ownerClosetAccess" maxLength={300} placeholder="Code 0210 · hall closet" className={inputClass} />
+                </Field>
               </div>
               <Field label="Notes (gate codes, supply location…)">
                 <textarea name="notes" rows={2} className={inputClass} />

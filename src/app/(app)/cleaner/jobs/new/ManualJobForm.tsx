@@ -100,6 +100,11 @@ export function ManualJobForm({ properties }: { properties: { id: string; name: 
                 <input name="clientState" maxLength={60} className={inputClass} placeholder="NC" />
               </Field>
             </div>
+            <div className="sm:col-span-2">
+              <Field label="Door access (optional)" hint="Lockbox/door code, or where the key is.">
+                <input name="clientDoorAccess" maxLength={300} className={inputClass} placeholder="Lockbox 4521 by the front door" />
+              </Field>
+            </div>
           </div>
         )}
 

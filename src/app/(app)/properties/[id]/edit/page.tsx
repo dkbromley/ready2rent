@@ -39,14 +39,30 @@ export default async function EditPropertyPage({
             <input name="name" required defaultValue={property.name} className={inputClass} />
           </Field>
 
-          <Field label="Street address">
-            <input name="address" defaultValue={property.address ?? ''} className={inputClass} />
-          </Field>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2">
+              <Field label="Street address">
+                <input name="address" defaultValue={property.address ?? ''} className={inputClass} />
+              </Field>
+            </div>
+            <Field label="Unit #">
+              <input name="unitNumber" maxLength={40} defaultValue={property.unitNumber ?? ''} placeholder="Unit 4B" className={inputClass} />
+            </Field>
+          </div>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <Field label="City"><input name="city" defaultValue={property.city ?? ''} className={inputClass} /></Field>
             <Field label="State"><input name="state" defaultValue={property.state ?? ''} className={inputClass} /></Field>
             <Field label="ZIP"><input name="zip" defaultValue={property.zip ?? ''} className={inputClass} /></Field>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Main door access" hint="Lockbox or door code, or where the key is.">
+              <input name="mainDoorAccess" maxLength={300} defaultValue={property.mainDoorAccess ?? ''} placeholder="Lockbox 4521 on the rail" className={inputClass} />
+            </Field>
+            <Field label="Owner's closet access" hint="Code, or where that key lives.">
+              <input name="ownerClosetAccess" maxLength={300} defaultValue={property.ownerClosetAccess ?? ''} placeholder="Code 0210 · hall closet" className={inputClass} />
+            </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -23,14 +23,30 @@ export default async function NewPropertyPage() {
             <input name="name" required placeholder="e.g. Sandpiper Cottage" className={inputClass} />
           </Field>
 
-          <Field label="Street address">
-            <input name="address" placeholder="123 Ocean Blvd" className={inputClass} />
-          </Field>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2">
+              <Field label="Street address">
+                <input name="address" placeholder="123 Ocean Blvd" className={inputClass} />
+              </Field>
+            </div>
+            <Field label="Unit # (optional)">
+              <input name="unitNumber" maxLength={40} placeholder="Unit 4B" className={inputClass} />
+            </Field>
+          </div>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <Field label="City"><input name="city" className={inputClass} /></Field>
             <Field label="State"><input name="state" className={inputClass} /></Field>
             <Field label="ZIP"><input name="zip" className={inputClass} /></Field>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Main door access (optional)" hint="Lockbox or door code, or where the key is.">
+              <input name="mainDoorAccess" maxLength={300} placeholder="Lockbox 4521 on the rail" className={inputClass} />
+            </Field>
+            <Field label="Owner's closet access (optional)" hint="Code, or where that key lives.">
+              <input name="ownerClosetAccess" maxLength={300} placeholder="Code 0210 · hall closet" className={inputClass} />
+            </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
