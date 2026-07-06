@@ -6,7 +6,7 @@ import { requireUser } from '@/lib/rbac';
 import { getOwnerDashboard, getUserTimezone } from '@/server/queries';
 import { getOutstandingForUser } from '@/server/financials';
 import { getOwnerOnboarding } from '@/server/onboarding';
-import { greetingForHour } from '@/components/dashboard/DashboardGreeting';
+import { greetingForHour } from '@/lib/greeting';
 import { toZonedTime } from 'date-fns-tz';
 import { OnboardingChecklist } from '@/components/OnboardingChecklist';
 import { formatMoney } from '@/lib/money';

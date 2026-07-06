@@ -6,7 +6,7 @@ import { getCleanerDashboard, getUserTimezone } from '@/server/queries';
 import { getOutstandingForUser } from '@/server/financials';
 import { prisma } from '@/lib/prisma';
 import { formatMoney } from '@/lib/money';
-import { greetingForHour } from '@/components/dashboard/DashboardGreeting';
+import { greetingForHour } from '@/lib/greeting';
 import { toZonedTime } from 'date-fns-tz';
 import { StatTile, SectionTitle, EmptyState, Card, LinkButton } from '@/components/ui';
 import { JobCard } from '@/components/JobCard';
