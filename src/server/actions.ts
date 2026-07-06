@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { CalendarPlatform, ExpenseCategory, JobStatus, JobType, MemberRole, PaymentMethod, PaymentStatus, UserRole } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { encryptSecret, hashFeedUrl, normalizeFeedUrl } from '@/lib/crypto';
+import { encryptSecret, encryptOptional, hashFeedUrl, normalizeFeedUrl } from '@/lib/crypto';
 import {
   canAccessJob,
   canAccessProperty,
@@ -68,8 +68,15 @@ export async function createProperty(formData: FormData) {
   });
   if (!membership) throw new Error('No owner organization found for this account.');
 
+  // Door/closet codes are encrypted at rest (same treatment as feed URLs).
+  const { mainDoorAccess, ownerClosetAccess, ...rest } = parsed.data;
   const property = await prisma.property.create({
-    data: { ...parsed.data, ownerOrganizationId: membership.organizationId },
+    data: {
+      ...rest,
+      ownerOrganizationId: membership.organizationId,
+      mainDoorAccess: encryptOptional(mainDoorAccess),
+      ownerClosetAccess: encryptOptional(ownerClosetAccess),
+    },
   });
 
   await handlePropertyImageUpload(property.id, formData);
@@ -96,8 +103,8 @@ export async function updateProperty(propertyId: string, formData: FormData) {
       calendarColor: calendarColor ?? null,
       cleaningPrice: cleaningPrice ?? null,
       unitNumber: unitNumber?.trim() || null,
-      mainDoorAccess: mainDoorAccess?.trim() || null,
-      ownerClosetAccess: ownerClosetAccess?.trim() || null,
+      mainDoorAccess: encryptOptional(mainDoorAccess),
+      ownerClosetAccess: encryptOptional(ownerClosetAccess),
     },
   });
 
@@ -845,8 +852,8 @@ export async function createCleanerProperty(formData: FormData) {
       state: d.state || null,
       zip: d.zip || null,
       unitNumber: d.unitNumber?.trim() || null,
-      mainDoorAccess: d.mainDoorAccess?.trim() || null,
-      ownerClosetAccess: d.ownerClosetAccess?.trim() || null,
+      mainDoorAccess: encryptOptional(d.mainDoorAccess),
+      ownerClosetAccess: encryptOptional(d.ownerClosetAccess),
       bedrooms: d.bedrooms,
       bathrooms: d.bathrooms,
       timezone: d.timezone,
@@ -1325,7 +1332,7 @@ export async function createManualJob(formData: FormData) {
         address: d.clientAddress?.trim() || null,
         city: d.clientCity?.trim() || null,
         state: d.clientState?.trim() || null,
-        mainDoorAccess: d.clientDoorAccess?.trim() || null,
+        mainDoorAccess: encryptOptional(d.clientDoorAccess),
         ownerOrganizationId: membership.organizationId,
         managementMode: 'CLEANER_MANAGED',
         createdByUserId: user.id,

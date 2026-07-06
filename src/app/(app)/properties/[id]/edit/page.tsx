@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { requireUser, canAccessProperty } from '@/lib/rbac';
 import { getPropertyDetail } from '@/server/queries';
 import { updateProperty } from '@/server/actions';
+import { decryptOptional } from '@/lib/crypto';
 import { PageHeader, Card, Field, inputClass } from '@/components/ui';
 import { SubmitButton } from '@/components/SubmitButton';
 import { COMMON_TIMEZONES } from '@/lib/timezones';
@@ -58,10 +59,10 @@ export default async function EditPropertyPage({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Main door access" hint="Lockbox or door code, or where the key is.">
-              <input name="mainDoorAccess" maxLength={300} defaultValue={property.mainDoorAccess ?? ''} placeholder="Lockbox 4521 on the rail" className={inputClass} />
+              <input name="mainDoorAccess" maxLength={300} defaultValue={decryptOptional(property.mainDoorAccess) ?? ''} placeholder="Lockbox 4521 on the rail" className={inputClass} />
             </Field>
             <Field label="Owner's closet access" hint="Code, or where that key lives.">
-              <input name="ownerClosetAccess" maxLength={300} defaultValue={property.ownerClosetAccess ?? ''} placeholder="Code 0210 · hall closet" className={inputClass} />
+              <input name="ownerClosetAccess" maxLength={300} defaultValue={decryptOptional(property.ownerClosetAccess) ?? ''} placeholder="Code 0210 · hall closet" className={inputClass} />
             </Field>
           </div>
 
