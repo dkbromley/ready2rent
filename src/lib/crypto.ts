@@ -1,9 +1,10 @@
 import crypto from 'node:crypto';
 
 /**
- * AES-256-GCM encryption for sensitive values at rest — specifically calendar
- * feed URLs, which can leak reservation data if exposed. Format of the stored
- * string: `<iv_hex>:<authTag_hex>:<ciphertext_hex>`.
+ * AES-256-GCM encryption for sensitive values at rest — calendar feed URLs
+ * (which can leak reservation data) and property access secrets (door/lockbox
+ * codes, owner's-closet codes). Format of the stored string:
+ * `<iv_hex>:<authTag_hex>:<ciphertext_hex>`.
  *
  * FEED_ENCRYPTION_KEY must be 64 hex chars (32 bytes). Generate with:
  *   openssl rand -hex 32
@@ -40,6 +41,33 @@ export function decryptSecret(payload: string): string {
     decipher.final(),
   ]);
   return decrypted.toString('utf8');
+}
+
+/**
+ * Encrypt an optional user-entered secret for storage. Trims, treats empty as
+ * null (so cleared fields persist as null, not ""), and encrypts non-empty
+ * values. Use for fields that are never looked up by value (door codes,
+ * closet codes) — no searchable hash is kept.
+ */
+export function encryptOptional(value: string | null | undefined): string | null {
+  const v = value?.trim();
+  if (!v) return null;
+  return encryptSecret(v);
+}
+
+/**
+ * Decrypt a value produced by encryptOptional. Defensive: if the stored value
+ * isn't a well-formed ciphertext (e.g. legacy plaintext written before this
+ * field was encrypted), the original string is returned rather than throwing,
+ * so a display page never crashes on unexpected data.
+ */
+export function decryptOptional(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    return decryptSecret(value);
+  } catch {
+    return value;
+  }
 }
 
 /** Stable hash of a feed URL for dedupe/lookup without decrypting. */

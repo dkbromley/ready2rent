@@ -27,6 +27,7 @@ import { JobChecklist } from '@/components/JobChecklist';
 import { ProblemReport } from '@/components/ProblemReport';
 import { formatInTz } from '@/lib/datetime';
 import { formatTurnoverWindow, JOB_STATUS_META, JOB_TYPE_META } from '@/lib/status';
+import { decryptOptional } from '@/lib/crypto';
 
 export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -35,6 +36,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
   const job = await getJobDetail(id);
   if (!job) notFound();
+
+  // Access codes are encrypted at rest; decrypt for this access-gated view.
+  const mainDoorAccess = decryptOptional(job.property.mainDoorAccess);
+  const ownerClosetAccess = decryptOptional(job.property.ownerClosetAccess);
 
   const tz = job.property.timezone;
   const isOwner = user.role === UserRole.OWNER || user.role === UserRole.ADMIN;
@@ -171,19 +176,20 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                   .join(', ')}
               </p>
             )}
-            {/* Access — the thing a cleaner opens this page for at the door. */}
-            {(job.property.mainDoorAccess || job.property.ownerClosetAccess) && (
+            {/* Access — the thing a cleaner opens this page for at the door.
+                Codes are stored encrypted; decrypted for this access-gated view. */}
+            {(mainDoorAccess || ownerClosetAccess) && (
               <div className="mt-3 space-y-1.5 rounded-xl bg-brand-50 p-3 ring-1 ring-inset ring-brand-600/10">
-                {job.property.mainDoorAccess && (
+                {mainDoorAccess && (
                   <p className="flex items-start gap-1.5 text-sm text-navy-800">
                     <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
-                    <span><span className="font-semibold">Main door:</span> {job.property.mainDoorAccess}</span>
+                    <span><span className="font-semibold">Main door:</span> {mainDoorAccess}</span>
                   </p>
                 )}
-                {job.property.ownerClosetAccess && (
+                {ownerClosetAccess && (
                   <p className="flex items-start gap-1.5 text-sm text-navy-800">
                     <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                    <span><span className="font-semibold">Owner&rsquo;s closet:</span> {job.property.ownerClosetAccess}</span>
+                    <span><span className="font-semibold">Owner&rsquo;s closet:</span> {ownerClosetAccess}</span>
                   </p>
                 )}
               </div>
