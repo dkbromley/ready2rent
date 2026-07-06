@@ -145,6 +145,10 @@ model User {
   role         UserRole @default(OWNER)
   phone        String?
   image        String?
+  /// Viewer's IANA timezone (e.g. "America/New_York"), auto-detected from the
+  /// browser. Drives the dashboard's date/greeting and today/this-week
+  /// bucketing so "today" means the user's local day, not the server's (UTC).
+  timezone     String?
   /// Payout profile: how this user (a cleaner) prefers to be paid. Ready2Rent
   /// never moves the money — hosts pay directly via the cleaner's chosen
   /// method; these fields power the "Pay via …" buttons on payment rows.
