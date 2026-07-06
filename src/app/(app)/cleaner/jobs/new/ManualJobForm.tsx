@@ -122,7 +122,7 @@ export function ManualJobForm({ properties }: { properties: { id: string; name: 
         </div>
 
         <Field label="Notes (optional)">
-          <textarea name="notes" rows={3} maxLength={2000} className={inputClass} placeholder="Gate code, focus areas, what the client asked for…" />
+          <textarea name="notes" rows={3} maxLength={2000} className={inputClass} placeholder="Focus areas, what the client asked for… (codes go in the door-access field above)" />
         </Field>
 
         <SubmitButton pendingText="Scheduling…">Schedule job</SubmitButton>

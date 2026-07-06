@@ -22,7 +22,7 @@ import { notifyOwnerOfJob } from '@/server/owner-notify';
 import { applyInvitationAcceptance, sendInvitationEmail } from '@/server/invitations';
 import { detectPlatformFromUrl } from '@/lib/feeds';
 import { resolveLocalDateTime } from '@/lib/datetime';
-import { storePropertyImage, storeReceipt, deleteStoredFile } from '@/lib/storage';
+import { storePropertyImage, storeReceipt, deleteStoredFile, deleteReceipt } from '@/lib/storage';
 import { MAX_IMAGE_BYTES, ALLOWED_IMAGE_TYPES } from '@/lib/limits';
 
 // ---------------------------------------------------------------------------
@@ -1096,7 +1096,7 @@ export async function deleteExpense(expenseId: string) {
   });
   if (!expense) throw new Error('Expense not found.');
   if (!(await canAccessProperty(user, expense.propertyId))) throw new Error('Not authorized.');
-  await deleteStoredFile(expense.receiptUrl);
+  await deleteReceipt(expense.receiptUrl);
   await prisma.expense.delete({ where: { id: expenseId } });
   revalidatePath('/financials');
   revalidatePath('/dashboard');

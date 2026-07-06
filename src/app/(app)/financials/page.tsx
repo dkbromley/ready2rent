@@ -1,5 +1,6 @@
 import { requireUser } from '@/lib/rbac';
 import { getFinancials } from '@/server/financials';
+import { receiptViewUrl } from '@/lib/storage';
 import { PageHeader } from '@/components/ui';
 import { FinancialsManager } from '@/components/FinancialsManager';
 
@@ -29,17 +30,21 @@ export default async function FinancialsPage() {
     };
   });
 
-  const expenses = data.expenses.map((e) => ({
-    id: e.id,
-    propertyId: e.propertyId,
-    propertyName: e.property.name,
-    amount: e.amount,
-    category: e.category,
-    description: e.description,
-    vendor: e.vendor,
-    incurredAt: e.incurredAt,
-    receiptUrl: e.receiptUrl,
-  }));
+  // Receipts live in a private bucket; mint short-lived signed URLs here, after
+  // getFinancials has already scoped expenses to the viewer's properties.
+  const expenses = await Promise.all(
+    data.expenses.map(async (e) => ({
+      id: e.id,
+      propertyId: e.propertyId,
+      propertyName: e.property.name,
+      amount: e.amount,
+      category: e.category,
+      description: e.description,
+      vendor: e.vendor,
+      incurredAt: e.incurredAt,
+      receiptUrl: await receiptViewUrl(e.receiptUrl),
+    })),
+  );
 
   return (
     <div>

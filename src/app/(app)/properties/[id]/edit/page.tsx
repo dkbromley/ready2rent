@@ -113,7 +113,7 @@ export default async function EditPropertyPage({
             </Field>
           </div>
 
-          <Field label="Notes for cleaners (optional)">
+          <Field label="Notes for cleaners (optional)" hint="Parking, quirks, staging preferences. Put door & lockbox codes in the access fields above — those are encrypted.">
             <textarea name="notes" rows={3} defaultValue={property.notes ?? ''} className={inputClass} />
           </Field>
 
