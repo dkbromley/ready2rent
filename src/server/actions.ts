@@ -1244,6 +1244,28 @@ export async function inviteTeamMember(formData: FormData) {
   revalidatePath('/cleaner/team');
 }
 
+/** Re-send a pending team invitation email (and refresh its expiry) — for
+ * invites that have sat unanswered. Owner/manager only. */
+export async function resendInvitation(invitationId: string) {
+  const user = await requireRole(UserRole.CLEANER, UserRole.ADMIN);
+  const membership = await cleaningOrgMembership(user.id);
+  if (!membership) throw new Error('No cleaning company found for this account.');
+  if (membership.role === 'MEMBER') {
+    throw new Error('Only the company owner or a manager can resend invites.');
+  }
+
+  const inv = await prisma.invitation.findUnique({ where: { id: invitationId } });
+  if (!inv || inv.organizationId !== membership.organizationId || inv.status !== 'PENDING') {
+    throw new Error('Not authorized.');
+  }
+  await prisma.invitation.update({
+    where: { id: invitationId },
+    data: { expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
+  });
+  await sendInvitationEmail(invitationId);
+  revalidatePath('/cleaner/team');
+}
+
 /** Hand a specific org-assigned job to a specific teammate ('' = back to the
  * shared pool). Only jobs assigned to the caller's cleaning company qualify. */
 export async function assignJobToMember(formData: FormData) {
@@ -1518,6 +1540,34 @@ export async function addTeamOnboardingItem(formData: FormData) {
   await prisma.teamOnboardingItem.create({
     data: { organizationId: membership.organizationId, text, position: (last?.position ?? -1) + 1 },
   });
+  revalidatePath('/cleaner/team');
+}
+
+/** Move a checklist item one slot up or down. Normalizes positions to their
+ * sorted index first so swaps stay correct even if positions have gaps. */
+export async function moveTeamOnboardingItem(formData: FormData) {
+  const user = await requireRole(UserRole.CLEANER, UserRole.ADMIN);
+  const membership = await requireTeamManager(user.id);
+  const itemId = String(formData.get('itemId') ?? '');
+  const direction = String(formData.get('direction') ?? '');
+  if (direction !== 'up' && direction !== 'down') throw new Error('Invalid direction.');
+
+  const items = await prisma.teamOnboardingItem.findMany({
+    where: { organizationId: membership.organizationId },
+    orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
+    select: { id: true },
+  });
+  const from = items.findIndex((i) => i.id === itemId);
+  if (from === -1) throw new Error('Not authorized.');
+  const to = direction === 'up' ? from - 1 : from + 1;
+  if (to < 0 || to >= items.length) return;
+
+  [items[from], items[to]] = [items[to], items[from]];
+  await prisma.$transaction(
+    items.map((i, position) =>
+      prisma.teamOnboardingItem.update({ where: { id: i.id }, data: { position } }),
+    ),
+  );
   revalidatePath('/cleaner/team');
 }
 

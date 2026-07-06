@@ -152,18 +152,21 @@ export function StatTile({
   value,
   tone = 'neutral',
   href,
+  hint,
 }: {
   icon: React.ReactNode;
   label: string;
   value: React.ReactNode;
   tone?: Tone;
   href?: string;
+  hint?: React.ReactNode;
 }) {
   const inner = (
     <div className="card h-full p-5 transition duration-150 hover:-translate-y-0.5 hover:shadow-card-hover">
       <span className={cn('inline-flex rounded-xl p-2.5 ring-1 ring-inset', TILE_ICON[tone])}>{icon}</span>
       <p className="mt-4 text-[11px] font-semibold uppercase tracking-wider text-navy-400">{label}</p>
       <p className={cn('mt-1 text-3xl font-extrabold tracking-tight', TILE_VALUE[tone])}>{value}</p>
+      {hint && <p className="mt-1 text-xs text-navy-400">{hint}</p>}
     </div>
   );
   return href ? <Link href={href} className="block h-full">{inner}</Link> : inner;
