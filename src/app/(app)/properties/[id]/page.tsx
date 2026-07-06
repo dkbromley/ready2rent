@@ -12,6 +12,7 @@ import {
   CalendarClock,
   Pencil,
   DollarSign,
+  KeyRound,
   Mail,
 } from 'lucide-react';
 import { CalendarPlatform, UserRole } from '@prisma/client';
@@ -92,7 +93,16 @@ export default async function PropertyDetailPage({
 
       <PageHeader
         title={property.name}
-        subtitle={[property.address, property.city, property.state, property.zip].filter(Boolean).join(', ') || undefined}
+        subtitle={
+          [
+            [property.address, property.unitNumber].filter(Boolean).join(', '),
+            property.city,
+            property.state,
+            property.zip,
+          ]
+            .filter(Boolean)
+            .join(', ') || undefined
+        }
         action={
           <div className="flex items-center gap-2">
             <Link
@@ -414,6 +424,34 @@ export default async function PropertyDetailPage({
               )}
             </Card>
           </section>
+
+          {/* Access — how the cleaner gets in. Visible to the host and the
+              assigned cleaner (this page is already access-gated). */}
+          {(property.mainDoorAccess || property.ownerClosetAccess) && (
+            <section>
+              <SectionTitle>Access</SectionTitle>
+              <Card className="space-y-2.5 text-sm">
+                {property.mainDoorAccess && (
+                  <div className="flex items-start gap-2">
+                    <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-navy-400">Main door</p>
+                      <p className="text-navy-800">{property.mainDoorAccess}</p>
+                    </div>
+                  </div>
+                )}
+                {property.ownerClosetAccess && (
+                  <div className="flex items-start gap-2">
+                    <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-navy-400">Owner&rsquo;s closet</p>
+                      <p className="text-navy-800">{property.ownerClosetAccess}</p>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </section>
+          )}
 
           {/* Notes */}
           {property.notes && (

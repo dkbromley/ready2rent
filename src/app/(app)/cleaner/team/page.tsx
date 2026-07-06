@@ -1,9 +1,18 @@
 import Link from 'next/link';
 import { UserRole, MemberRole } from '@prisma/client';
-import { Mail, UserPlus, Users, HandCoins, CircleCheck, Circle, Building2 } from 'lucide-react';
+import { Mail, UserPlus, Users, HandCoins, CircleCheck, Circle, Building2, ChevronDown, X, ClipboardList } from 'lucide-react';
 import { requireRole } from '@/lib/rbac';
 import { getCleanerTeam } from '@/server/queries';
-import { inviteTeamMember, assignJobToMember, revokeInvitation, updateBusinessProfile } from '@/server/actions';
+import {
+  inviteTeamMember,
+  assignJobToMember,
+  revokeInvitation,
+  updateBusinessProfile,
+  addTeamOnboardingItem,
+  deleteTeamOnboardingItem,
+  addStarterOnboardingItems,
+  toggleTeamOnboardingCheck,
+} from '@/server/actions';
 import { PageHeader, Card, SectionTitle, EmptyState, inputClass, Field } from '@/components/ui';
 import { SubmitButton } from '@/components/SubmitButton';
 import { JobStatusBadge, SameDayBadge } from '@/components/StatusBadge';
@@ -122,6 +131,57 @@ export default async function TeamPage() {
                       ? `${PAYMENT_METHOD_LABEL[m.user.payoutMethod]}: ${m.user.payoutHandle}`
                       : 'No payout profile yet'}
                   </p>
+
+                  {/* Per-member new-hire onboarding progress */}
+                  {team.onboardingItems.length > 0 && (
+                    <details className="group mt-3 border-t border-sand-100 pt-3">
+                      <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold [&::-webkit-details-marker]:hidden">
+                        <span
+                          className={cn(
+                            m.checkedItemIds.size === team.onboardingItems.length
+                              ? 'text-brand-700'
+                              : 'text-amber-700',
+                          )}
+                        >
+                          Onboarding {m.checkedItemIds.size}/{team.onboardingItems.length}
+                          {m.checkedItemIds.size === team.onboardingItems.length && ' ✓'}
+                        </span>
+                        <ChevronDown className="h-3.5 w-3.5 text-navy-400 transition-transform group-open:rotate-180" />
+                      </summary>
+                      <ul className="mt-2 space-y-0.5">
+                        {team.onboardingItems.map((item) => {
+                          const done = m.checkedItemIds.has(item.id);
+                          const row = (
+                            <>
+                              {done ? (
+                                <CircleCheck className="h-3.5 w-3.5 shrink-0 text-brand-500" />
+                              ) : (
+                                <Circle className="h-3.5 w-3.5 shrink-0 text-navy-300" />
+                              )}
+                              <span className={cn('text-xs', done ? 'text-navy-400 line-through' : 'text-navy-700')}>
+                                {item.text}
+                              </span>
+                            </>
+                          );
+                          return (
+                            <li key={item.id}>
+                              {canManage ? (
+                                <form action={toggleTeamOnboardingCheck}>
+                                  <input type="hidden" name="itemId" value={item.id} />
+                                  <input type="hidden" name="memberId" value={m.id} />
+                                  <button className="flex w-full items-center gap-2 rounded-lg px-1.5 py-1 text-left transition hover:bg-sand-50">
+                                    {row}
+                                  </button>
+                                </form>
+                              ) : (
+                                <span className="flex items-center gap-2 px-1.5 py-1">{row}</span>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </details>
+                  )}
                   {isOwner && (
                     <MemberActions
                       memberId={m.id}
@@ -244,6 +304,56 @@ export default async function TeamPage() {
                 />
                 <SubmitButton pendingText="Sending…">
                   <UserPlus className="h-4 w-4" /> Send invite
+                </SubmitButton>
+              </form>
+            </Card>
+          )}
+
+          {canManage && (
+            <Card>
+              <div className="mb-3 flex items-center gap-2">
+                <span className="inline-flex rounded-xl bg-brand-50 p-2 text-brand-700 ring-1 ring-inset ring-brand-600/15">
+                  <ClipboardList className="h-4 w-4" />
+                </span>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-500">New-hire checklist</h2>
+              </div>
+              <p className="mb-3 text-sm text-navy-500">
+                The steps every new teammate completes — tick them off on each member&rsquo;s card.
+              </p>
+              {team.onboardingItems.length === 0 ? (
+                <form action={addStarterOnboardingItems} className="mb-3">
+                  <SubmitButton variant="secondary" pendingText="Adding…">
+                    Add starter checklist
+                  </SubmitButton>
+                </form>
+              ) : (
+                <ul className="mb-3 space-y-1">
+                  {team.onboardingItems.map((item) => (
+                    <li key={item.id} className="flex items-center justify-between gap-2 rounded-lg px-1.5 py-1 text-sm text-navy-700 hover:bg-sand-50">
+                      <span className="min-w-0 truncate">{item.text}</span>
+                      <form action={deleteTeamOnboardingItem.bind(null, item.id)}>
+                        <button
+                          className="rounded p-1 text-navy-300 transition hover:text-coral-600"
+                          title={`Remove "${item.text}"`}
+                          aria-label={`Remove onboarding item: ${item.text}`}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </form>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <form action={addTeamOnboardingItem} className="flex gap-2">
+                <input
+                  name="text"
+                  required
+                  maxLength={200}
+                  placeholder="Add an item…"
+                  className={cn(inputClass, 'flex-1 py-1.5 text-sm')}
+                />
+                <SubmitButton variant="secondary" pendingText="…" className="px-3 py-1.5 text-xs">
+                  Add
                 </SubmitButton>
               </form>
             </Card>

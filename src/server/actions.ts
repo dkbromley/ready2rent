@@ -35,6 +35,9 @@ const propertySchema = z.object({
   city: z.string().max(120).optional(),
   state: z.string().max(60).optional(),
   zip: z.string().max(20).optional(),
+  unitNumber: z.string().max(40).optional(),
+  mainDoorAccess: z.string().max(300).optional(),
+  ownerClosetAccess: z.string().max(300).optional(),
   bedrooms: z.coerce.number().int().min(0).max(50).default(0),
   bathrooms: z.coerce.number().int().min(0).max(50).default(0),
   timezone: z.string().min(1).default('America/New_York'),
@@ -85,13 +88,16 @@ export async function updateProperty(propertyId: string, formData: FormData) {
 
   // Coalesce optional fields to explicit null so clearing them persists (Prisma
   // omits undefined). calendarColor/cleaningPrice are nullable on the model.
-  const { calendarColor, cleaningPrice, ...rest } = parsed.data;
+  const { calendarColor, cleaningPrice, unitNumber, mainDoorAccess, ownerClosetAccess, ...rest } = parsed.data;
   await prisma.property.update({
     where: { id: propertyId },
     data: {
       ...rest,
       calendarColor: calendarColor ?? null,
       cleaningPrice: cleaningPrice ?? null,
+      unitNumber: unitNumber?.trim() || null,
+      mainDoorAccess: mainDoorAccess?.trim() || null,
+      ownerClosetAccess: ownerClosetAccess?.trim() || null,
     },
   });
 
@@ -794,6 +800,9 @@ const cleanerPropertySchema = z.object({
   city: z.string().max(120).optional(),
   state: z.string().max(60).optional(),
   zip: z.string().max(20).optional(),
+  unitNumber: z.string().max(40).optional(),
+  mainDoorAccess: z.string().max(300).optional(),
+  ownerClosetAccess: z.string().max(300).optional(),
   bedrooms: z.coerce.number().int().min(0).max(50).default(0),
   bathrooms: z.coerce.number().int().min(0).max(50).default(0),
   timezone: z.string().min(1).default('America/New_York'),
@@ -835,6 +844,9 @@ export async function createCleanerProperty(formData: FormData) {
       city: d.city || null,
       state: d.state || null,
       zip: d.zip || null,
+      unitNumber: d.unitNumber?.trim() || null,
+      mainDoorAccess: d.mainDoorAccess?.trim() || null,
+      ownerClosetAccess: d.ownerClosetAccess?.trim() || null,
       bedrooms: d.bedrooms,
       bathrooms: d.bathrooms,
       timezone: d.timezone,
@@ -1269,6 +1281,7 @@ const manualJobSchema = z.object({
   clientAddress: z.string().trim().max(240).optional().or(z.literal('')),
   clientCity: z.string().trim().max(120).optional().or(z.literal('')),
   clientState: z.string().trim().max(60).optional().or(z.literal('')),
+  clientDoorAccess: z.string().trim().max(300).optional().or(z.literal('')),
   type: z.enum(['ONE_OFF', 'MOVE_OUT', 'DEEP_CLEAN']),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Pick a date'),
   startTime: z.string().regex(/^\d{1,2}:\d{2}$/).default('10:00'),
@@ -1312,6 +1325,7 @@ export async function createManualJob(formData: FormData) {
         address: d.clientAddress?.trim() || null,
         city: d.clientCity?.trim() || null,
         state: d.clientState?.trim() || null,
+        mainDoorAccess: d.clientDoorAccess?.trim() || null,
         ownerOrganizationId: membership.organizationId,
         managementMode: 'CLEANER_MANAGED',
         createdByUserId: user.id,
@@ -1467,4 +1481,103 @@ export async function removeTeamMember(memberId: string) {
   ]);
   revalidatePath('/cleaner/team');
   revalidatePath('/cleaner');
+}
+
+// ---------------------------------------------------------------------------
+// Team new-hire onboarding checklist
+// ---------------------------------------------------------------------------
+
+/** Owner/manager gate shared by the onboarding-item actions. */
+async function requireTeamManager(userId: string) {
+  const membership = await cleaningOrgMembership(userId);
+  if (!membership) throw new Error('No cleaning company found for this account.');
+  if (membership.role === 'MEMBER') {
+    throw new Error('Only the company owner or a manager can manage onboarding.');
+  }
+  return membership;
+}
+
+export async function addTeamOnboardingItem(formData: FormData) {
+  const user = await requireRole(UserRole.CLEANER, UserRole.ADMIN);
+  const membership = await requireTeamManager(user.id);
+  const text = String(formData.get('text') ?? '').trim();
+  if (!text || text.length > 200) throw new Error('Enter an item (max 200 characters).');
+
+  const last = await prisma.teamOnboardingItem.findFirst({
+    where: { organizationId: membership.organizationId },
+    orderBy: { position: 'desc' },
+    select: { position: true },
+  });
+  await prisma.teamOnboardingItem.create({
+    data: { organizationId: membership.organizationId, text, position: (last?.position ?? -1) + 1 },
+  });
+  revalidatePath('/cleaner/team');
+}
+
+export async function deleteTeamOnboardingItem(itemId: string) {
+  const user = await requireRole(UserRole.CLEANER, UserRole.ADMIN);
+  const membership = await requireTeamManager(user.id);
+  const item = await prisma.teamOnboardingItem.findUnique({ where: { id: itemId } });
+  if (!item || item.organizationId !== membership.organizationId) throw new Error('Not authorized.');
+  await prisma.teamOnboardingItem.delete({ where: { id: itemId } });
+  revalidatePath('/cleaner/team');
+}
+
+const STARTER_ONBOARDING_ITEMS = [
+  'Payout profile set — how they get paid',
+  'Phone number added for schedule alerts',
+  'W-9 / paperwork collected',
+  'Supplies & products walkthrough',
+  'Shadowed a clean with a senior teammate',
+];
+
+/** Seed the starter checklist (only when the org has no items yet). */
+export async function addStarterOnboardingItems() {
+  const user = await requireRole(UserRole.CLEANER, UserRole.ADMIN);
+  const membership = await requireTeamManager(user.id);
+  const count = await prisma.teamOnboardingItem.count({
+    where: { organizationId: membership.organizationId },
+  });
+  if (count > 0) return;
+  await prisma.teamOnboardingItem.createMany({
+    data: STARTER_ONBOARDING_ITEMS.map((text, i) => ({
+      organizationId: membership.organizationId,
+      text,
+      position: i,
+    })),
+  });
+  revalidatePath('/cleaner/team');
+}
+
+/** Tick/untick an onboarding item for a teammate. Owner/manager only. */
+export async function toggleTeamOnboardingCheck(formData: FormData) {
+  const user = await requireRole(UserRole.CLEANER, UserRole.ADMIN);
+  const membership = await requireTeamManager(user.id);
+  const itemId = String(formData.get('itemId') ?? '');
+  const memberId = String(formData.get('memberId') ?? '');
+
+  const [item, member] = await Promise.all([
+    prisma.teamOnboardingItem.findUnique({ where: { id: itemId } }),
+    prisma.organizationMember.findUnique({ where: { id: memberId } }),
+  ]);
+  if (
+    !item ||
+    !member ||
+    item.organizationId !== membership.organizationId ||
+    member.organizationId !== membership.organizationId
+  ) {
+    throw new Error('Not authorized.');
+  }
+
+  const existing = await prisma.teamOnboardingCheck.findUnique({
+    where: { itemId_memberId: { itemId, memberId } },
+  });
+  if (existing) {
+    await prisma.teamOnboardingCheck.delete({ where: { id: existing.id } });
+  } else {
+    await prisma.teamOnboardingCheck.create({
+      data: { itemId, memberId, checkedByUserId: user.id },
+    });
+  }
+  revalidatePath('/cleaner/team');
 }

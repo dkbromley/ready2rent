@@ -252,11 +252,12 @@ export async function getCleanerTeam(user: SessionUser) {
   const monthStart = startOfMonth(new Date());
   const today = startOfToday();
 
-  const [members, pendingInvites, upcoming, completed, profile, me] = await Promise.all([
+  const [members, pendingInvites, upcoming, completed, profile, me, onboardingItems] = await Promise.all([
     prisma.organizationMember.findMany({
       where: { organizationId: orgId },
       include: {
         user: { select: { id: true, name: true, email: true, payoutMethod: true, payoutHandle: true } },
+        onboardingChecks: { select: { itemId: true } },
       },
       orderBy: { createdAt: 'asc' },
     }),
@@ -290,6 +291,11 @@ export async function getCleanerTeam(user: SessionUser) {
       where: { id: user.id },
       select: { payoutMethod: true, payoutHandle: true },
     }),
+    // New-hire onboarding checklist template.
+    prisma.teamOnboardingItem.findMany({
+      where: { organizationId: orgId },
+      orderBy: { position: 'asc' },
+    }),
   ]);
 
   const statsByUser = new Map<string, { cleans: number; value: number }>();
@@ -310,7 +316,9 @@ export async function getCleanerTeam(user: SessionUser) {
       role: m.role,
       user: m.user,
       thisMonth: statsByUser.get(m.user.id) ?? { cleans: 0, value: 0 },
+      checkedItemIds: new Set(m.onboardingChecks.map((c) => c.itemId)),
     })),
+    onboardingItems,
     pendingInvites,
     upcoming,
     unassignedThisMonth: statsByUser.get('') ?? { cleans: 0, value: 0 },

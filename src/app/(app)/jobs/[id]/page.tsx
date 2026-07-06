@@ -6,6 +6,7 @@ import {
   LogIn,
   Timer,
   MapPin,
+  KeyRound,
   Bed,
   Bath,
   Home,
@@ -160,8 +161,32 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             {(job.property.address || job.property.city) && (
               <p className="mt-2 flex items-start gap-1.5 text-sm text-navy-500">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-                {[job.property.address, job.property.city, job.property.state, job.property.zip].filter(Boolean).join(', ')}
+                {[
+                  [job.property.address, job.property.unitNumber].filter(Boolean).join(', '),
+                  job.property.city,
+                  job.property.state,
+                  job.property.zip,
+                ]
+                  .filter(Boolean)
+                  .join(', ')}
               </p>
+            )}
+            {/* Access — the thing a cleaner opens this page for at the door. */}
+            {(job.property.mainDoorAccess || job.property.ownerClosetAccess) && (
+              <div className="mt-3 space-y-1.5 rounded-xl bg-brand-50 p-3 ring-1 ring-inset ring-brand-600/10">
+                {job.property.mainDoorAccess && (
+                  <p className="flex items-start gap-1.5 text-sm text-navy-800">
+                    <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
+                    <span><span className="font-semibold">Main door:</span> {job.property.mainDoorAccess}</span>
+                  </p>
+                )}
+                {job.property.ownerClosetAccess && (
+                  <p className="flex items-start gap-1.5 text-sm text-navy-800">
+                    <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                    <span><span className="font-semibold">Owner&rsquo;s closet:</span> {job.property.ownerClosetAccess}</span>
+                  </p>
+                )}
+              </div>
             )}
             <div className="mt-3 flex gap-4 text-sm text-navy-600">
               <span className="inline-flex items-center gap-1"><Bed className="h-4 w-4 text-navy-400" /> {job.property.bedrooms}</span>

@@ -241,8 +241,42 @@ model Organization {
   assignedJobs           TurnoverJob[]           @relation("JobAssignedOrg")
   serviceProviderProfile ServiceProviderProfile?
   invitations            Invitation[]
+  teamOnboardingItems    TeamOnboardingItem[]
 
   @@index([type])
+}
+
+/// A line on a cleaning company's new-hire onboarding checklist ("W-9
+/// collected", "supply closet walkthrough", …), authored by the org owner or
+/// a manager. Mirrors the property-checklist pattern: items are the template,
+/// checks record per-member completion.
+model TeamOnboardingItem {
+  id             String   @id @default(cuid())
+  organizationId String
+  text           String
+  position       Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  checks       TeamOnboardingCheck[]
+
+  @@index([organizationId, position])
+}
+
+/// Per-member completion of an onboarding item. A row exists only when the
+/// item is checked off for that member; deleting it un-checks.
+model TeamOnboardingCheck {
+  id              String   @id @default(cuid())
+  itemId          String
+  memberId        String
+  checkedByUserId String?
+  checkedAt       DateTime @default(now())
+
+  item   TeamOnboardingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  member OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, memberId])
+  @@index([memberId])
 }
 
 model OrganizationMember {
@@ -254,6 +288,8 @@ model OrganizationMember {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  onboardingChecks TeamOnboardingCheck[]
 
   @@unique([organizationId, userId])
   @@index([userId])
@@ -279,6 +315,13 @@ model Property {
   /// Wall-clock "HH:mm" defaults applied when a feed event has no explicit time.
   defaultCheckInTime   String   @default("16:00")
   defaultCheckOutTime  String   @default("10:00")
+  /// Unit/suite/slip number, shown alongside the street address.
+  unitNumber           String?
+  /// How the cleaner gets in: lockbox/door code, "key under the turtle", etc.
+  /// Same sensitivity level as `notes` (visible to the host + assigned cleaner).
+  mainDoorAccess       String?
+  /// Owner's closet access — code, key location, or "ask host".
+  ownerClosetAccess    String?
   notes                String?
   /// Optional hero image for the property (Supabase Storage public URL).
   imageUrl             String?
