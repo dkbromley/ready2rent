@@ -54,7 +54,7 @@ export default async function PayoutSettingsPage() {
               className={inputClass}
             />
           </Field>
-          <div className="rounded-xl bg-brand-50 p-3 text-xs leading-relaxed text-navy-600 ring-1 ring-inset ring-brand-600/10">
+          <div className="rounded-xl bg-brand-50 p-3 text-xs leading-relaxed text-brand-800 ring-1 ring-inset ring-brand-600/10">
             <p className="flex items-start gap-2">
               <HandCoins className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
               <span>
