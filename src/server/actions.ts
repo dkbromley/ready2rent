@@ -794,6 +794,7 @@ export async function updateNotificationPreferences(formData: FormData) {
     jobCanceled: on('jobCanceled'),
     sameDayTurnover: on('sameDayTurnover'),
     problems: on('problems'),
+    emailAlerts: on('emailAlerts'),
   };
   await prisma.$transaction([
     prisma.user.update({ where: { id: user.id }, data: { phone: phone || null } }),
@@ -1289,7 +1290,12 @@ export async function assignJobToMember(formData: FormData) {
 
   const job = await prisma.turnoverJob.findUnique({
     where: { id: jobId },
-    select: { assignedOrganizationId: true },
+    select: {
+      assignedOrganizationId: true,
+      assignedUserId: true,
+      propertyId: true,
+      property: { select: { name: true } },
+    },
   });
   if (!job || job.assignedOrganizationId !== membership.organizationId) {
     throw new Error('Not authorized.');
@@ -1304,6 +1310,12 @@ export async function assignJobToMember(formData: FormData) {
     where: { id: jobId },
     data: { assignedUserId: memberUserId || null },
   });
+  // Tell the assignee — unless nothing changed or they assigned themselves.
+  if (memberUserId && memberUserId !== job.assignedUserId && memberUserId !== user.id) {
+    await notify
+      .jobAssigned(jobId, job.propertyId, memberUserId, job.property.name)
+      .catch(() => undefined);
+  }
   revalidatePath('/cleaner/team');
   revalidatePath('/cleaner');
   revalidatePath(`/jobs/${jobId}`);

@@ -52,6 +52,21 @@ export default async function NotificationSettingsPage() {
               />
             </Field>
           </div>
+          <label className="mb-4 flex cursor-pointer items-start justify-between gap-4 rounded-xl border-b border-sand-100 p-3 pb-5 transition hover:bg-navy-50">
+            <span>
+              <span className="block text-sm font-medium text-navy-900">Email me for urgent alerts</span>
+              <span className="block text-xs text-navy-500">
+                Same-day turnovers, problems, and turnovers assigned to you go to{' '}
+                {user.email ?? 'your account email'}. Everything else stays in-app.
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              name="emailAlerts"
+              defaultChecked={prefs?.emailAlerts ?? false}
+              className="mt-0.5 h-5 w-5 shrink-0 rounded border-navy-300 text-brand-600 focus:ring-brand-500"
+            />
+          </label>
           {CATEGORIES.map((c) => (
             <label
               key={c.key}

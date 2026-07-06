@@ -225,6 +225,9 @@ model NotificationPreference {
   jobCanceled     Boolean  @default(true)
   sameDayTurnover Boolean  @default(true)
   problems        Boolean  @default(true)
+  /// Email channel for urgent alerts (same-day turnovers, problems,
+  /// direct assignment). Opt-in — unlike the category flags above.
+  emailAlerts     Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
