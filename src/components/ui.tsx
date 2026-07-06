@@ -2,8 +2,8 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 /** Card surface. */
-export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <div className={cn('card p-5', className)}>{children}</div>;
+export function Card({ className, id, children }: { className?: string; id?: string; children: React.ReactNode }) {
+  return <div id={id} className={cn('card p-5', className)}>{children}</div>;
 }
 
 export function SectionTitle({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {

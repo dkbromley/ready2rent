@@ -252,7 +252,7 @@ export async function getCleanerTeam(user: SessionUser) {
   const monthStart = startOfMonth(new Date());
   const today = startOfToday();
 
-  const [members, pendingInvites, upcoming, completed] = await Promise.all([
+  const [members, pendingInvites, upcoming, completed, profile, me] = await Promise.all([
     prisma.organizationMember.findMany({
       where: { organizationId: orgId },
       include: {
@@ -284,6 +284,12 @@ export async function getCleanerTeam(user: SessionUser) {
       where: { assignedOrganizationId: orgId, status: JobStatus.COMPLETED, completedAt: { gte: monthStart } },
       select: { assignedUserId: true, price: true, property: { select: { cleaningPrice: true } } },
     }),
+    // Public business details (also seeds the future marketplace mini-site).
+    prisma.serviceProviderProfile.findUnique({ where: { organizationId: orgId } }),
+    prisma.user.findUnique({
+      where: { id: user.id },
+      select: { payoutMethod: true, payoutHandle: true },
+    }),
   ]);
 
   const statsByUser = new Map<string, { cleans: number; value: number }>();
@@ -298,6 +304,7 @@ export async function getCleanerTeam(user: SessionUser) {
   return {
     org: membership.organization,
     myRole: membership.role,
+    profile,
     members: members.map((m) => ({
       id: m.id,
       role: m.role,
@@ -307,6 +314,14 @@ export async function getCleanerTeam(user: SessionUser) {
     pendingInvites,
     upcoming,
     unassignedThisMonth: statsByUser.get('') ?? { cleans: 0, value: 0 },
+    // Crew setup checklist — auto-derived, the card hides once all are true.
+    setup: {
+      hasDetails: Boolean(profile && (profile.phone || profile.bio || profile.serviceAreas.length > 0)),
+      hasPayout: Boolean(me?.payoutMethod && me?.payoutHandle),
+      hasTeammate: members.length > 1 || pendingInvites.length > 0,
+      hasAssignment:
+        upcoming.some((j) => j.assignedUser != null) || completed.some((c) => c.assignedUserId != null),
+    },
   };
 }
 

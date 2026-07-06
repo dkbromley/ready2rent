@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
-import { CalendarPlatform, ExpenseCategory, JobStatus, JobType, PaymentMethod, PaymentStatus, UserRole } from '@prisma/client';
+import { CalendarPlatform, ExpenseCategory, JobStatus, JobType, MemberRole, PaymentMethod, PaymentStatus, UserRole } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { encryptSecret, hashFeedUrl, normalizeFeedUrl } from '@/lib/crypto';
 import {
@@ -1348,4 +1348,123 @@ export async function createManualJob(formData: FormData) {
   revalidatePath('/cleaner');
   revalidatePath('/jobs');
   redirect(`/jobs/${job.id}`);
+}
+
+// ---------------------------------------------------------------------------
+// Business profile & member management (cleaning companies)
+// ---------------------------------------------------------------------------
+
+const businessSchema = z.object({
+  name: z.string().trim().min(1, 'Business name is required').max(160),
+  phone: z.string().trim().max(40).optional().or(z.literal('')),
+  serviceAreas: z.string().trim().max(400).optional().or(z.literal('')),
+  bio: z.string().trim().max(1000).optional().or(z.literal('')),
+});
+
+/** Edit the cleaning company's name + public details. Details live on the
+ * org's ServiceProviderProfile (the future marketplace/mini-site record), so
+ * filling this in now seeds that later surface. Owner/manager only. */
+export async function updateBusinessProfile(formData: FormData) {
+  const user = await requireRole(UserRole.CLEANER, UserRole.ADMIN);
+  const membership = await cleaningOrgMembership(user.id);
+  if (!membership) throw new Error('No cleaning company found for this account.');
+  if (membership.role === 'MEMBER') {
+    throw new Error('Only the company owner or a manager can edit business details.');
+  }
+
+  const parsed = businessSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) throw new Error(parsed.error.errors[0]?.message ?? 'Invalid business details');
+  const d = parsed.data;
+  const serviceAreas = (d.serviceAreas ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 12);
+
+  await prisma.organization.update({
+    where: { id: membership.organizationId },
+    data: { name: d.name },
+  });
+  await prisma.serviceProviderProfile.upsert({
+    where: { organizationId: membership.organizationId },
+    update: {
+      displayName: d.name,
+      phone: d.phone?.trim() || null,
+      bio: d.bio?.trim() || null,
+      serviceAreas,
+    },
+    create: {
+      organizationId: membership.organizationId,
+      displayName: d.name,
+      phone: d.phone?.trim() || null,
+      bio: d.bio?.trim() || null,
+      serviceAreas,
+    },
+  });
+  revalidatePath('/cleaner/team');
+  revalidatePath('/cleaner');
+}
+
+/** Change a teammate's role. Org owner only; you can't demote yourself while
+ * you're the only owner (the org would be ownerless). */
+export async function updateTeamMemberRole(formData: FormData) {
+  const user = await requireRole(UserRole.CLEANER, UserRole.ADMIN);
+  const memberId = String(formData.get('memberId') ?? '');
+  const role = String(formData.get('role') ?? '');
+  if (!['OWNER', 'MANAGER', 'MEMBER'].includes(role)) throw new Error('Pick a valid role.');
+
+  const membership = await cleaningOrgMembership(user.id);
+  if (!membership || membership.role !== 'OWNER') {
+    throw new Error('Only the company owner can change roles.');
+  }
+  const target = await prisma.organizationMember.findUnique({ where: { id: memberId } });
+  if (!target || target.organizationId !== membership.organizationId) throw new Error('Not authorized.');
+
+  if (target.userId === user.id && role !== 'OWNER') {
+    const owners = await prisma.organizationMember.count({
+      where: { organizationId: membership.organizationId, role: 'OWNER' },
+    });
+    if (owners <= 1) throw new Error('Add another owner before changing your own role.');
+  }
+
+  await prisma.organizationMember.update({
+    where: { id: memberId },
+    data: { role: role as MemberRole },
+  });
+  revalidatePath('/cleaner/team');
+}
+
+/** Remove a teammate from the company. Org owner only. Their open jobs go
+ * back to the shared pool and their property assignments revert to the org;
+ * completed history is untouched. */
+export async function removeTeamMember(memberId: string) {
+  const user = await requireRole(UserRole.CLEANER, UserRole.ADMIN);
+  const membership = await cleaningOrgMembership(user.id);
+  if (!membership || membership.role !== 'OWNER') {
+    throw new Error('Only the company owner can remove teammates.');
+  }
+  const target = await prisma.organizationMember.findUnique({ where: { id: memberId } });
+  if (!target || target.organizationId !== membership.organizationId) throw new Error('Not authorized.');
+  if (target.userId === user.id) throw new Error("You can't remove yourself.");
+
+  const orgId = membership.organizationId;
+  await prisma.$transaction([
+    prisma.organizationMember.delete({ where: { id: memberId } }),
+    // Their open jobs return to the pool; completed history stays theirs.
+    prisma.turnoverJob.updateMany({
+      where: {
+        assignedOrganizationId: orgId,
+        assignedUserId: target.userId,
+        status: { notIn: [JobStatus.COMPLETED, JobStatus.CANCELED] },
+      },
+      data: { assignedUserId: null },
+    }),
+    // Property-level assignment falls back to the company.
+    prisma.property.updateMany({
+      where: { assignedCleanerOrganizationId: orgId, assignedCleanerUserId: target.userId },
+      data: { assignedCleanerUserId: null },
+    }),
+  ]);
+  revalidatePath('/cleaner/team');
+  revalidatePath('/cleaner');
 }
